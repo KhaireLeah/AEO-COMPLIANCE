@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://6658f2995425580055b23448.mockapi.io/api/v1';
+const API_BASE_URL = 'https://69ccc9cfddc3cabb7bd18d7f.mockapi.io/api/v1';
 const DOCS_URL = `${API_BASE_URL}/documents`;
 const ACTIVITIES_URL = `${API_BASE_URL}/activities`;
 
