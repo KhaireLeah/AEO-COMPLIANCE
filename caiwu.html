@@ -498,8 +498,17 @@
         if (IS_ADMIN) canView = true;
         if (uploader === CURRENT_USER) canView = true;
         
-        if (Array.isArray(visibility)) {
-            if (visibility.includes('all') || visibility.includes(REQUIRED_DEPT) || (authorizedDept && visibility.includes(authorizedDept))) {
+        // 解析 visibility (可能是 JSON 字符串或数组)
+        var visArray = [];
+        try {
+            visArray = typeof visibility === 'string' ? JSON.parse(visibility) : visibility;
+        } catch(e) {
+            visArray = [visibility];
+        }
+
+        // 多选可见性判断
+        if (Array.isArray(visArray)) {
+            if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
                 canView = true;
             }
         } else if (visibility === 'all' || visibility === REQUIRED_DEPT) {
@@ -548,47 +557,49 @@
         
         pendingTable.innerHTML = '';
         docs.forEach(function(doc) {
-            if (doc.dept === REQUIRED_DEPT) {
-                var canSee = false;
-                if (IS_ADMIN) canSee = true;
-                if (doc.applicant === CURRENT_USER) canSee = true;
+            // 权限校验逻辑
+            var canSee = false;
+            if (IS_ADMIN) canSee = true;
+            if (doc.applicant === CURRENT_USER) canSee = true;
+            
+            // 多选可见性支持
+            var visArray = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
+            if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
+                canSee = true;
+            }
+
+            if (canSee) {
+                // 仅统计本部门发起的待处理单证，但显示所有可见单证
+                if (doc.dept === REQUIRED_DEPT && doc.status === 'pending') pendingCount++;
                 
-                if (Array.isArray(doc.visibility)) {
-                    if (doc.visibility.includes('all') || doc.visibility.includes(REQUIRED_DEPT)) {
-                        canSee = true;
-                    }
-                } else if (doc.visibility === 'all' || doc.visibility === REQUIRED_DEPT) {
-                    canSee = true;
+                var tr = document.createElement('tr');
+                
+                // 状态显示
+                var statusDisplay = '';
+                if (doc.status === 'pending') {
+                    statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
+                } else if (doc.status === 'passed') {
+                    statusDisplay = '<span style="color: #52c41a;">已通过</span>';
+                } else if (doc.status === 'rejected') {
+                    statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
                 }
 
-                if (canSee) {
-                    if (doc.status === 'pending') pendingCount++;
-                    
-                    var tr = document.createElement('tr');
-                    
-                    var statusDisplay = '';
-                    if (doc.status === 'pending') {
-                        statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
-                    } else if (doc.status === 'passed') {
-                        statusDisplay = '<span style="color: #52c41a;">已通过</span>';
-                    } else if (doc.status === 'rejected') {
-                        statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
-                    }
-
-                    var actions = '<a href="#" class="action-link" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+JSON.stringify(doc.visibility).replace(/"/g, '&quot;')+'\')">查看</a>';
-                    if (doc.status === 'rejected' && doc.applicant === CURRENT_USER) {
-                        actions += ' | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload(\''+doc.id+'\')">重新上传</a>';
-                    }
+                // 操作按钮
+                var actions = '<a href="#" class="action-link" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+JSON.stringify(doc.visibility).replace(/"/g, '&quot;')+'\')">查看</a>';
+                if (doc.status === 'rejected' && doc.applicant === CURRENT_USER) {
+                    actions += ' | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload(\''+doc.id+'\')">重新上传</a>';
+                }
+                if (IS_ADMIN || doc.applicant === CURRENT_USER) {
                     actions += ' | <a href="#" class="action-link" style="color: #ff4d4f;" onclick="deleteDoc(\''+doc.id+'\', \''+doc.applicant+'\')">删除</a>';
-
-                    tr.innerHTML = '<td>[ ' + doc.id + ' ]</td>' +
-                                   '<td>[ ' + doc.type + ' ]</td>' +
-                                   '<td>' + statusDisplay + '</td>' +
-                                   '<td>[ ' + doc.applicant + ' ]</td>' +
-                                   '<td>[ ' + doc.time + ' ]</td>' +
-                                   '<td>' + actions + '</td>';
-                    pendingTable.appendChild(tr);
                 }
+
+                tr.innerHTML = '<td>[ ' + doc.id + ' ]</td>' +
+                               '<td>[ ' + doc.type + ' ]</td>' +
+                               '<td>' + statusDisplay + '</td>' +
+                               '<td>[ ' + doc.applicant + ' ]</td>' +
+                               '<td>[ ' + doc.time + ' ]</td>' +
+                               '<td>' + actions + '</td>';
+                pendingTable.appendChild(tr);
             }
         });
         document.getElementById('pendingCount').innerText = '[ ' + pendingCount + ' ]';
