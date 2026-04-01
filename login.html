@@ -251,11 +251,11 @@
             if (routes[code]) {
                 // 存储授权部门到 sessionStorage，用于权限校验
                 sessionStorage.setItem('authorizedDept', routes[code].dept);
-                location.href = routes[code].url;
+                window.location.replace(routes[code].url); // 使用 replace 确保更稳定的跳转
             } else if (code === '666') {
                 // 管理员全权限
                 sessionStorage.setItem('authorizedDept', '项目管理');
-                location.href = 'xiangmu.html'; 
+                window.location.replace('xiangmu.html'); 
             } else {
                 alert("验证代码错误，请重试");
             }
