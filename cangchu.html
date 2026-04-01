@@ -1,0 +1,766 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>仓储部 - 业务流程管理系统</title>
+<style type="text/css">
+	body {
+    background-color: #f0f2f5;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.header {
+    background-color: #fff;
+    padding: 0 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.right-menu {
+    display: flex;
+    align-items: center;
+}
+
+.help, .datetime {
+    margin-left: 16px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.sidebar {
+    background-color: #fff;
+    width: 256px;
+    height: calc(100vh - 64px);
+}
+
+.department-title {
+    padding: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.menu-item:hover, .menu-item.active {
+    background-color: #e6f7ff;
+}
+
+.menu-item-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+}
+
+.menu-item-text h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.menu-item-text p {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.main-content {
+    flex: 1;
+    padding: 0;
+    background-color: #f0f2f5;
+    height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.top-banner {
+    background-color: #2f54eb;
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    font-weight: bold;
+    position: relative;
+}
+
+.top-banner .switch-link {
+    position: absolute;
+    right: 24px;
+    font-size: 14px;
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.top-banner .switch-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.content-inner {
+    padding: 24px;
+}
+
+.stats-cards {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.card {
+    flex: 1;
+    border-radius: 8px;
+    padding: 24px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card.blue { background-color: #597ef7; }
+.card.yellow { background-color: #ffc53d; color: #333; }
+
+.card-title { font-size: 16px; margin-bottom: 12px; font-weight: 500; }
+.card-value { font-size: 28px; font-weight: bold; }
+
+.doc-section {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 24px;
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 20px;
+}
+
+.tab {
+    padding: 12px 24px;
+    cursor: pointer;
+    font-weight: 500;
+    color: rgba(0,0,0,0.45);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tab.active {
+    color: #1890ff;
+    border-bottom: 2px solid #1890ff;
+}
+
+.doc-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.doc-table th {
+    background-color: #f0f5ff;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #1d39c4;
+}
+
+.doc-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: rgba(0,0,0,0.85);
+}
+
+.action-link {
+    color: #1890ff;
+    text-decoration: none;
+    margin-right: 8px;
+}
+
+.activities-section {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.activities-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 12px;
+}
+
+.activity-item {
+    padding: 8px 0;
+    font-size: 14px;
+    color: rgba(0,0,0,0.65);
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.activity-item:hover {
+    color: #1890ff;
+}
+
+.upload-btn-container {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.btn-upload {
+    background-color: #1890ff;
+    color: white;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-upload:hover { background-color: #40a9ff; }
+
+/* Upload Options Style */
+.upload-options {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 10px;
+    display: none;
+    text-align: left;
+}
+
+.option-group {
+    margin-bottom: 10px;
+}
+
+.option-group label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.option-group select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+}
+
+.memo-container {
+    margin: 120px 20px 20px 20px;
+    padding: 15px;
+    background-color: #FFF9C4; 
+    border: 1px solid #FBC02D;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.memo-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #827717;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #D4E157;
+    padding-bottom: 5px;
+}
+
+#memoInput {
+    width: 100%;
+    height: 250px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: #333;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+}
+
+/* Avatar Style */
+.user-avatar {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.user-avatar:hover {
+    transform: translateY(-2px);
+}
+
+.avatar-img {
+    width: 32px;
+    height: 32px;
+    background: #1890ff;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 18px;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0,0,0,0.85);
+}
+
+.logout-menu {
+    position: absolute;
+    bottom: 60px;
+    right: 0;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 8px 0;
+    display: none;
+    width: 100px;
+    text-align: center;
+}
+
+.logout-menu div {
+    padding: 8px;
+    font-size: 14px;
+    color: #ff4d4f;
+    cursor: pointer;
+}
+
+.logout-menu div:hover {
+    background: #fff1f0;
+}
+</style>
+<script type="text/javascript">
+    // 权限校验：必须通过 login.html 授权后才能进入
+    const REQUIRED_DEPT = "仓储部";
+    const authorizedDept = sessionStorage.getItem('authorizedDept');
+    
+    // 如果没有授权，或者授权的部门不是当前部门（且不是项目管理），则拦截
+    if (!authorizedDept || (authorizedDept !== REQUIRED_DEPT && authorizedDept !== '项目管理')) {
+        alert('权限不足：请先登录并选择正确的部门。');
+        window.location.href = 'login.html'; 
+    }
+
+    const CURRENT_USER = "仓储管理员B";
+    const IS_ADMIN = (authorizedDept === '项目管理');
+
+    function updateTime() {
+        var now = new Date();
+        var timeStr = now.getFullYear() + "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-" + now.getDate().toString().padStart(2, '0') + " " + now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0');
+        var clock = document.getElementById("liveClock");
+        if(clock) { clock.innerHTML = timeStr; }
+    }
+
+    function saveMemo() {
+        var content = document.getElementById("memoInput").value;
+        localStorage.setItem("userMemo", content); 
+    }
+
+    function toggleLogoutMenu() {
+        var menu = document.getElementById('logoutMenu');
+        menu.style.display = (menu.style.display === 'block' ? 'none' : 'block');
+    }
+
+    function logout() {
+        window.location.href = 'login.html';
+    }
+
+    var reuploadDocId = null;
+
+    // 模拟文件上传
+    function handleUpload() {
+        var fileInput = document.getElementById('fileUpload');
+        if (fileInput.files.length === 0) {
+            alert('请选择要上传的文件！');
+            return;
+        }
+        
+        var optionsPanel = document.getElementById('uploadOptions');
+        optionsPanel.style.display = 'block';
+        
+        if (reuploadDocId) {
+            var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+            var doc = docs.find(d => d.id === reuploadDocId);
+            if (doc) {
+                document.getElementById('docType').value = doc.type;
+                document.querySelectorAll('.vis-check').forEach(cb => {
+                    cb.checked = doc.visibility.includes(cb.value) || doc.visibility.includes('all');
+                });
+            }
+        }
+    }
+
+    function confirmUpload() {
+        var fileInput = document.getElementById('fileUpload');
+        var file = fileInput.files[0];
+        var docType = document.getElementById('docType').value;
+        
+        var selectedVis = [];
+        document.querySelectorAll('.vis-check:checked').forEach(cb => selectedVis.push(cb.value));
+        
+        if (selectedVis.length === 0) {
+            alert('请至少选择一个可见部门！');
+            return;
+        }
+
+        var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+
+        if (reuploadDocId) {
+            var oldDocIndex = docs.findIndex(d => d.id === reuploadDocId);
+            if (oldDocIndex !== -1) {
+                docs[oldDocIndex] = {
+                    ...docs[oldDocIndex],
+                    name: file.name,
+                    type: docType,
+                    fileExt: file.name.split('.').pop().toUpperCase(),
+                    time: '刚刚 (已更新)',
+                    status: 'pending',
+                    visibility: selectedVis
+                };
+                alert('单据已重新上传，等待再次审核！');
+            }
+            reuploadDocId = null;
+        } else {
+            var newDoc = {
+                id: 'B' + Math.floor(Math.random() * 10000),
+                name: file.name,
+                type: docType,
+                fileExt: file.name.split('.').pop().toUpperCase(),
+                dept: REQUIRED_DEPT,
+                action: '录入',
+                applicant: CURRENT_USER,
+                time: '刚刚',
+                status: 'pending',
+                visibility: selectedVis
+            };
+            docs.unshift(newDoc);
+            alert('文件上传成功！');
+        }
+
+        localStorage.setItem('allDocs', JSON.stringify(docs));
+
+        var activity = {
+            text: CURRENT_USER + ' 上传了单据 ' + file.name,
+            time: new Date().toLocaleString(),
+            fileName: file.name,
+            uploader: CURRENT_USER,
+            visibility: selectedVis
+        };
+        var activities = JSON.parse(localStorage.getItem('activities') || '[]');
+        activities.unshift(activity);
+        localStorage.setItem('activities', JSON.stringify(activities));
+
+        document.getElementById('uploadOptions').style.display = 'none';
+        fileInput.value = '';
+        loadDocs();
+        loadActivities();
+    }
+
+    function triggerReupload(docId) {
+        reuploadDocId = docId;
+        document.getElementById('fileUpload').click();
+    }
+
+    function viewFile(uploader, fileName, visibility) {
+        var canView = false;
+        if (IS_ADMIN) canView = true;
+        if (uploader === CURRENT_USER) canView = true;
+        if (Array.isArray(visibility)) {
+            if (visibility.includes('all') || visibility.includes(REQUIRED_DEPT) || visibility.includes(authorizedDept)) canView = true;
+        } else if (visibility === 'all' || visibility === REQUIRED_DEPT) {
+            canView = true;
+        }
+        
+        if (canView) {
+            alert('正在预览文件: ' + fileName + '\n(权限校验通过)');
+        } else {
+            alert('抱歉，您没有权限查看此文件。\n(权限限制)');
+        }
+    }
+
+    function deleteDoc(docId, uploader) {
+        if (IS_ADMIN || uploader === CURRENT_USER) {
+            if (confirm('确定要删除该单据吗？')) {
+                var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+                var docToDelete = docs.find(d => d.id === docId);
+                docs = docs.filter(d => d.id !== docId);
+                localStorage.setItem('allDocs', JSON.stringify(docs));
+
+                var activity = {
+                    text: CURRENT_USER + ' 删除了单据 ' + (docToDelete ? docToDelete.name : docId),
+                    time: new Date().toLocaleString(),
+                    fileName: docToDelete ? docToDelete.name : '',
+                    uploader: CURRENT_USER,
+                    visibility: 'all'
+                };
+                var activities = JSON.parse(localStorage.getItem('activities') || '[]');
+                activities.unshift(activity);
+                localStorage.setItem('activities', JSON.stringify(activities));
+
+                alert('单据已删除！');
+                loadDocs();
+                loadActivities();
+            }
+        } else {
+            alert('抱歉，您没有权限删除此单据。\n(仅上传者或项目经理可删除)');
+        }
+    }
+
+    function loadDocs() {
+        var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+        var pendingTable = document.getElementById('pendingDocsBody');
+        var pendingCount = 0;
+        
+        pendingTable.innerHTML = '';
+        docs.forEach(function(doc) {
+            if (doc.dept === '仓储部') {
+                var canSee = false;
+                if (IS_ADMIN) canSee = true;
+                if (doc.applicant === CURRENT_USER) canSee = true;
+                if (doc.visibility === 'all') canSee = true;
+                if (doc.visibility === '仓储部') canSee = true;
+
+                if (canSee) {
+                    if (doc.status === 'pending') pendingCount++;
+                    
+                    var tr = document.createElement('tr');
+                    
+                    var statusDisplay = '';
+                    if (doc.status === 'pending') {
+                        statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
+                    } else if (doc.status === 'passed') {
+                        statusDisplay = '<span style="color: #52c41a;">已通过</span>';
+                    } else if (doc.status === 'rejected') {
+                        statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
+                    }
+
+                    var actions = '<a href="#" class="action-link" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+doc.visibility+'\')">查看</a>';
+                    if (doc.status === 'rejected' && doc.applicant === CURRENT_USER) {
+                        actions += ' | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload(\''+doc.id+'\')">重新上传</a>';
+                    }
+                    actions += ' | <a href="#" class="action-link" style="color: #ff4d4f;" onclick="deleteDoc(\''+doc.id+'\', \''+doc.applicant+'\')">删除</a>';
+
+                    tr.innerHTML = '<td>[ ' + doc.id + ' ]</td>' +
+                                   '<td>[ ' + doc.type + ' ]</td>' +
+                                   '<td>' + statusDisplay + '</td>' +
+                                   '<td>[ ' + doc.applicant + ' ]</td>' +
+                                   '<td>[ ' + doc.time + ' ]</td>' +
+                                   '<td>' + actions + '</td>';
+                    pendingTable.appendChild(tr);
+                }
+            }
+        });
+        document.getElementById('pendingCount').innerText = '[ ' + pendingCount + ' ]';
+    }
+
+    function loadActivities() {
+        var activities = JSON.parse(localStorage.getItem('activities') || '[]');
+        var container = document.getElementById('activitiesBody');
+        container.innerHTML = '';
+        activities.slice(0, 5).forEach(function(item) {
+            var canSee = false;
+            if (IS_ADMIN) canSee = true;
+            if (item.uploader === CURRENT_USER) canSee = true;
+            if (item.visibility === 'all') canSee = true;
+            if (item.visibility === '仓储部') canSee = true;
+
+            if (canSee) {
+                var div = document.createElement('div');
+                div.className = 'activity-item';
+                div.innerText = '[ ' + item.text + ' ] - ' + item.time;
+                div.onclick = function() { viewFile(item.uploader, item.fileName, item.visibility); };
+                container.appendChild(div);
+            }
+        });
+    }
+
+    window.onload = function() {
+        setInterval(updateTime, 1000);
+        updateTime();
+        var savedMemo = localStorage.getItem("userMemo");
+        if (savedMemo) { document.getElementById("memoInput").value = savedMemo; }
+        
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'userMemo') {
+                document.getElementById("memoInput").value = e.newValue;
+            }
+            if (e.key === 'allDocs' || e.key === 'activities') {
+                loadDocs();
+                loadActivities();
+            }
+        });
+
+        loadDocs();
+        loadActivities();
+
+        document.addEventListener('click', function(e) {
+            if (!document.querySelector('.user-avatar').contains(e.target)) {
+                document.getElementById('logoutMenu').style.display = 'none';
+            }
+        });
+    }
+</script>
+</head>
+
+<body>
+<div class="header">
+    <div class="logo">BPM System</div>
+    <div class="right-menu">
+        <div class="help"><a href="news.html" style="text-decoration: none; color: inherit;">② 帮助</a></div>
+        <div id="liveClock" class="datetime"></div>
+    </div>
+</div>
+<div style="display: flex;">
+    <div class="sidebar">
+        <div class="department-title">部门分类</div>
+        <div class="menu-item" onclick="window.location.href='yewu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>业务部</h4>
+            </div>
+        </div>
+        <div class="menu-item active" onclick="window.location.href='cangchu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMjEuOCA4LjdsLTEuNC0xLjVMNy43IDQuNCA2LjMgNS44bDEyLjUgMTEuMmwzLjEtMy4xYy42LS42LjYtMS41IDAtMi4xek0xNy41IDEuOWwtMS40IDEuNEwzLjggMTUuOGwtMS40IDEuNGMtLjYtLjYtMS41LS42LTIuMSAwcy0uNiAxLjUgMCAyLjFsMy41IDMuNWMyLjIgMi4yIDUuOCAyLjIgOCAwTDIxLjggOC43Yy42LS42LjYtMS41IDAtMi4xek0xNiAxMy4ybDEuNCAxLjRMMTAuMiAyMWwtMS40LTEuNEwxNiAxMy4yeiIvPjwvc3ZnPg==" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>仓储部</h4>
+            </div>
+        </div>
+        <div class="menu-item" onclick="window.location.href='caiwu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>财务部</h4>
+            </div>
+        </div>
+        <div class="menu-item" onclick="window.location.href='xiangmu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNzI2MmZkIiBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMzhjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTQgNCAxLjc5IDQgNC0xLjc5IDQtNCA0em0wLTEwYy0yLjc2IDAtNS0yLjI0LTUtNXMyLjI0LTUgNS01IDUgMi4yNCA1IDUtMi4yNCA1LTUgNXoiLz48L3N2Zz4=" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>项目管理</h4>
+            </div>
+        </div>
+        <div class="memo-container">
+            <div class="memo-title">备忘录</div>
+            <textarea id="memoInput" onkeyup="saveMemo()"></textarea>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="top-banner">
+            [ 仓储部 - 仓储管理 ]
+            <a href="index.html" class="switch-link">切换至其他业务... ▾</a>
+        </div>
+        
+        <div class="content-inner">
+            <div class="stats-cards">
+                <div class="card blue">
+                    <div class="card-title">当前业务项目</div>
+                    <div class="card-value">[ 仓储系统 B002 ]</div>
+                    <div style="font-size: 12px; margin-top: 8px;">[ 库存盘点中 ]</div>
+                </div>
+                <div class="card yellow">
+                    <div class="card-title">未处理单据计数</div>
+                    <div class="card-value" id="pendingCount">[ 0 ]</div>
+                </div>
+            </div>
+
+            <div class="doc-section">
+                <div class="tabs">
+                    <div class="tab active">[ 未处理单据 ]</div>
+                    <div class="tab">已处理单据</div>
+                </div>
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th>项目ID</th>
+                            <th>单证类型</th>
+                            <th>审核状态</th>
+                            <th>申请人</th>
+                            <th>停留时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingDocsBody">
+                        <!-- 由 JS 填充 -->
+                    </tbody>
+                </table>
+
+                <div class="upload-btn-container">
+                    <div id="uploadOptions" class="upload-options">
+                        <div class="option-group">
+                            <label>选择单据类型</label>
+                            <select id="docType">
+                                <option value="入库单">入库单</option>
+                                <option value="出库单">出库单</option>
+                                <option value="库存盘点">库存盘点</option>
+                                <option value="物流协议">物流协议</option>
+                                <option value="入区单证">入区单证</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>设置可见权限 (多选)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666;">
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="all"> 所有人可见</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="项目管理"> 项目管理</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="业务部"> 业务部</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="仓储部" checked> 仓储部</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="财务部"> 财务部</label>
+                            </div>
+                        </div>
+                        <button class="btn-upload" onclick="confirmUpload()" style="width: 100%; margin-top: 10px;">确认上传</button>
+                    </div>
+                    <input type="file" id="fileUpload" style="display: none;" onchange="handleUpload()">
+                    <button class="btn-upload" onclick="document.getElementById('fileUpload').click()">上传新单据</button>
+                </div>
+            </div>
+
+            <div class="activities-section">
+                <div class="activities-title">最新动态 (仓储)</div>
+                <div id="activitiesBody">
+                    <!-- 由 JS 填充 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avatar UI -->
+<div class="user-avatar" onclick="toggleLogoutMenu()">
+    <div class="avatar-img">👤</div>
+    <div class="user-name">已登录: 仓储管理员B</div>
+    <div class="logout-menu" id="logoutMenu">
+        <div onclick="logout()">退出登录</div>
+    </div>
+</div>
+
+</body>
+</html>

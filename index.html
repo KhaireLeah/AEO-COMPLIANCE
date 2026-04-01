@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统门户 - 业务流程管理系统</title>
+    <style type="text/css">
+        :root {
+            --primary-color: #1890ff;
+            --bg-color: #f4f7f9;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --white: #ffffff;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--white);
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--primary-color);
+        }
+
+        .header-right {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .help-link {
+            text-decoration: none;
+            color: var(--text-sub);
+            transition: color 0.3s;
+        }
+
+        .help-link:hover { color: var(--primary-color); }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--white);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-title {
+            padding: 30px 25px 15px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: #f8fbff;
+            color: var(--primary-color);
+        }
+
+        .nav-item i { font-size: 20px; }
+        .nav-item span { font-weight: 500; font-size: 15px; }
+
+        .memo-box {
+            margin: auto 20px 30px;
+            padding: 20px;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 12px;
+        }
+
+        .memo-box h5 { margin: 0 0 12px; color: #856404; font-size: 14px; }
+        #memoInput {
+            width: 100%;
+            height: 180px;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .login-card {
+            background: var(--white);
+            padding: 50px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .login-card h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .login-card p {
+            color: var(--text-sub);
+            margin-bottom: 35px;
+            font-size: 15px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .login-input:focus {
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .login-btn:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">BPM System</div>
+        <div class="header-right">
+            <a href="login.html" class="help-link" style="color: #ff4d4f; font-weight: 600;">退出登录</a>
+            <a href="news.html" class="help-link">帮助中心</a>
+            <div id="liveClock" style="color: var(--text-sub); font-family: monospace;"></div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <aside class="sidebar">
+            <div class="nav-title">部门概览</div>
+            <div class="nav-item" onclick="location.href='yewu.html'">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" width="20"> <span>业务部</span>
+            </div>
+            <div class="nav-item" onclick="location.href='cangchu.html'">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMjEuOCA4LjdsLTEuNC0xLjVMNy43IDQuNCA2LjMgNS44bDEyLjUgMTEuMmwzLjEtMy4xYy42LS42LjYtMS41IDAtMi4xek0xNy41IDEuOWwtMS40IDEuNEwzLjggMTUuOGwtMS40IDEuNGMtLjYtLjYtMS41LS42LTIuMSAwcy0uNiAxLjUgMCAyLjFsMy41IDMuNWMyLjIgMi4yIDUuOCAyLjIgOCAwTDIxLjggOC43Yy42LS42LjYtMS41IDAtMi4xek0xNiAxMy4ybDEuNCAxLjRMMTAuMiAyMWwtMS40LTEuNEwxNiAxMy4yeiIvPjwvc3ZnPg==" alt="" width="20"> <span>仓储部</span>
+            </div>
+            <div class="nav-item" onclick="location.href='caiwu.html'">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" width="20"> <span>财务部</span>
+            </div>
+            <div class="nav-item" onclick="location.href='xiangmu.html'">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNzI2MmZkIiBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMzhjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTQgNCAxLjc5IDQgNC0xLjc5IDQtNCA0em0wLTEwYy0yLjc2IDAtNS0yLjI0LTUtNXMyLjI0LTUgNS01IDUgMi4yNCA1IDUtMi4yNCA1LTUgNXoiLz48L3N2Zz4=" alt="" width="20"> <span>项目管理</span>
+            </div>
+
+            <div class="memo-box">
+                <h5>个人备忘录</h5>
+                <textarea id="memoInput" onkeyup="saveMemo()" placeholder="在此输入备注..."></textarea>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <div class="login-card">
+                <h1>身份验证</h1>
+                <p>请输入您的专属代码以访问工作台</p>
+                
+                <div class="input-group">
+                    <input type="password" id="authCode" class="login-input" placeholder="验证代码" onkeydown="if(event.keyCode==13) checkLogin();">
+                </div>
+                <button class="login-btn" onclick="checkLogin()">进入系统</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            const timeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            document.getElementById("liveClock").textContent = timeStr;
+        }
+
+        function checkLogin() {
+            const code = document.getElementById("authCode").value;
+            const routes = {
+                'dzy01': { url: 'yewu.html', dept: '业务部' },
+                'czb01': { url: 'cangchu.html', dept: '仓储部' },
+                'cwb01': { url: 'caiwu.html', dept: '财务部' },
+                'gl01': { url: 'xiangmu.html', dept: '项目管理' }
+            };
+            
+            if (routes[code]) {
+                // 存储授权部门到 sessionStorage，用于权限校验
+                sessionStorage.setItem('authorizedDept', routes[code].dept);
+                location.href = routes[code].url;
+            } else if (code === '666') {
+                // 管理员全权限
+                sessionStorage.setItem('authorizedDept', '项目管理');
+                location.href = 'index.html'; 
+            } else {
+                alert("验证代码错误，请重试");
+            }
+        }
+
+        function saveMemo() {
+            localStorage.setItem("userMemo", document.getElementById("memoInput").value);
+        }
+
+        window.onload = function() {
+            setInterval(updateTime, 1000);
+            updateTime();
+            document.getElementById("memoInput").value = localStorage.getItem("userMemo") || "";
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'userMemo') document.getElementById("memoInput").value = e.newValue;
+            });
+        }
+    </script>
+</body>
+</html>
