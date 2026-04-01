@@ -361,6 +361,7 @@
     background: #fff1f0;
 }
 </style>
+<script type="text/javascript" src="api.js"></script>
 <script type="text/javascript">
     // 权限校验：必须通过 login.html 授权后才能进入
     const REQUIRED_DEPT = "财务部";
@@ -384,7 +385,7 @@
 
     function saveMemo() {
         var content = document.getElementById("memoInput").value;
-        localStorage.setItem("userMemo", content); 
+        localStorage.setItem("userMemo", content);
     }
 
     function toggleLogoutMenu() {
@@ -399,25 +400,28 @@
 
     var reuploadDocId = null;
 
-    // 模拟文件上传：第一步，选择文件
-    function handleUpload() {
+    async function handleUpload() {
         var fileInput = document.getElementById('fileUpload');
         if (fileInput.files.length === 0) return;
-        
+
         var optionsPanel = document.getElementById('uploadOptions');
         optionsPanel.style.display = 'block';
-        
+
         if (reuploadDocId) {
-            var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
-            var doc = docs.find(d => d.id === reuploadDocId);
-            if (doc) {
-                document.getElementById('docType').value = doc.type;
+            try {
+                const docs = await getDocs();
+                var doc = docs.find(d => d.id === reuploadDocId);
+                if (doc) {
+                    document.getElementById('docType').value = doc.type;
+                }
+            } catch (error) {
+                console.error('Error fetching doc for re-upload:', error);
+                alert('获取旧单据信息失败，请检查网络连接。');
             }
         }
     }
 
-    // 第二步：确认最终上传
-    function confirmUpload() {
+    async function confirmUpload() {
         var fileInput = document.getElementById('fileUpload');
         var file = fileInput.files[0];
         if (!file) {
@@ -426,71 +430,82 @@
         }
 
         var docType = document.getElementById('docType').value;
-        
         var selectedVis = [];
-        document.querySelectorAll('.vis-check:checked').forEach(cb => selectedVis.push(cb.value));
-        
+        document.querySelectorAll('.vis-check:checked').forEach(cb => {
+            selectedVis.push(cb.value);
+        });
+
         if (selectedVis.length === 0) {
             alert('请至少选择一个可见部门！');
             return;
         }
 
+        const uploadButton = document.querySelector('.btn-upload[onclick="confirmUpload()"]');
+        uploadButton.disabled = true;
+        uploadButton.textContent = '正在上传...';
+
         var reader = new FileReader();
-        reader.onload = function(e) {
-            var fileData = e.target.result;
-            var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
-            
-            if (reuploadDocId) {
-                var oldDocIndex = docs.findIndex(d => d.id === reuploadDocId);
-                if (oldDocIndex !== -1) {
-                    docs[oldDocIndex] = {
-                        ...docs[oldDocIndex],
+        reader.onload = async function(e) {
+            try {
+                var fileData = e.target.result;
+
+                const activityText = CURRENT_USER + (reuploadDocId ? ' 重新上传了单据 ' : ' 上传了单据 ') + file.name;
+                let docId = reuploadDocId;
+
+                if (reuploadDocId) {
+                    const docs = await getDocs();
+                    const oldDoc = docs.find(d => d.id === reuploadDocId);
+                    if (oldDoc) {
+                        const updatedDoc = {
+                            ...oldDoc,
+                            name: file.name,
+                            type: docType,
+                            fileExt: file.name.split('.').pop().toUpperCase(),
+                            fileData: fileData,
+                            status: 'pending',
+                            visibility: selectedVis
+                        };
+                        await updateDoc(reuploadDocId, updatedDoc);
+                        alert('单据已重新上传，等待再次审核！');
+                    }
+                    reuploadDocId = null;
+                } else {
+                    var newDoc = {
                         name: file.name,
                         type: docType,
                         fileExt: file.name.split('.').pop().toUpperCase(),
                         fileData: fileData,
-                        time: '刚刚 (已更新)',
+                        dept: REQUIRED_DEPT,
+                        action: '录入',
+                        applicant: CURRENT_USER,
                         status: 'pending',
                         visibility: selectedVis
                     };
-                    alert('单据已重新上传，等待再次审核！');
+                    const createdDoc = await addDoc(newDoc);
+                    docId = createdDoc.id;
+                    alert('文件上传成功！');
                 }
-                reuploadDocId = null;
-            } else {
-                var newDoc = {
-                    id: 'C' + Math.floor(Math.random() * 10000),
-                    name: file.name,
-                    type: docType,
-                    fileExt: file.name.split('.').pop().toUpperCase(),
-                    fileData: fileData,
-                    dept: REQUIRED_DEPT,
-                    action: '录入',
-                    applicant: CURRENT_USER,
-                    time: '刚刚',
-                    status: 'pending',
-                    visibility: selectedVis
+
+                var activity = {
+                    text: activityText,
+                    fileName: file.name,
+                    uploader: CURRENT_USER,
+                    visibility: selectedVis,
+                    docId: docId
                 };
-                docs.unshift(newDoc);
-                alert('文件上传成功！');
+                await addActivity(activity);
+
+            } catch (error) {
+                console.error('Upload failed:', error);
+                alert('上传失败，请检查网络或联系管理员。');
+            } finally {
+                uploadButton.disabled = false;
+                uploadButton.textContent = '确认上传';
+                document.getElementById('uploadOptions').style.display = 'none';
+                fileInput.value = '';
+                loadDocs();
+                loadActivities();
             }
-
-            localStorage.setItem('allDocs', JSON.stringify(docs));
-
-            var activity = {
-                text: CURRENT_USER + ' 上传了单据 ' + file.name,
-                time: new Date().toLocaleString(),
-                fileName: file.name,
-                uploader: CURRENT_USER,
-                visibility: selectedVis
-            };
-            var activities = JSON.parse(localStorage.getItem('activities') || '[]');
-            activities.unshift(activity);
-            localStorage.setItem('activities', JSON.stringify(activities));
-
-            document.getElementById('uploadOptions').style.display = 'none';
-            fileInput.value = '';
-            loadDocs();
-            loadActivities();
         };
         reader.readAsDataURL(file);
     }
@@ -500,147 +515,160 @@
         document.getElementById('fileUpload').click();
     }
 
-    function viewFile(uploader, fileName, visibility, docId) {
+    async function viewFile(uploader, fileName, visibility, docId) {
         var canView = false;
-        if (IS_ADMIN) canView = true;
-        if (uploader === CURRENT_USER) canView = true;
-        
-        var visArray = [];
-        try {
-            visArray = typeof visibility === 'string' ? JSON.parse(visibility) : visibility;
-        } catch(e) {
-            visArray = [visibility];
+        if (IS_ADMIN || uploader === CURRENT_USER) canView = true;
+
+        let visArray = [];
+        if (Array.isArray(visibility)) {
+            visArray = visibility;
+        } else if (typeof visibility === 'string') {
+            try {
+                visArray = JSON.parse(visibility);
+            } catch (e) {
+                visArray = [visibility];
+            }
         }
 
-        if (Array.isArray(visArray)) {
-            if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
-                canView = true;
-            }
-        } else if (visibility === 'all' || visibility === REQUIRED_DEPT) {
+        if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
             canView = true;
         }
-        
+
         if (canView) {
-            var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
-            var doc = docs.find(d => d.id === docId || (d.name === fileName && d.applicant === uploader));
-            
-            if (doc && doc.fileData) {
-                var win = window.open();
-                if (win) {
-                    win.document.write('<iframe src="' + doc.fileData + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+            try {
+                const docs = await getDocs();
+                const doc = docs.find(d => d.id === docId);
+
+                if (doc && doc.fileData) {
+                    var win = window.open();
+                    if (win) {
+                        win.document.write('<iframe src="' + doc.fileData + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+                    } else {
+                        alert('弹出窗口被拦截，请允许弹出窗口后重试。');
+                    }
                 } else {
-                    alert('弹出窗口被拦截，请允许弹出窗口后重试。');
+                    alert('无法找到文件内容。文件可能已被删除或数据不完整。');
                 }
-            } else {
-                alert('正在模拟预览文件: ' + fileName + '\n(该文件仅为元数据演示，无真实内容)');
+            } catch (error) {
+                console.error('Error viewing file:', error);
+                alert('查看文件失败，请检查网络连接。');
             }
         } else {
-            alert('抱歉，您没有权限查看此文件。\n(该文件设置了特定的可见部门)');
+            alert('抱歉，您没有权限查看此文件。');
         }
     }
 
-    function deleteDoc(docId, uploader) {
+    async function deleteDoc(docId, uploader) {
         if (IS_ADMIN || uploader === CURRENT_USER) {
             if (confirm('确定要删除该单据吗？')) {
-                var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
-                var docToDelete = docs.find(d => d.id === docId);
-                docs = docs.filter(d => d.id !== docId);
-                localStorage.setItem('allDocs', JSON.stringify(docs));
+                try {
+                    const docs = await getDocs();
+                    const docToDelete = docs.find(d => d.id === docId);
 
-                var activity = {
-                    text: CURRENT_USER + ' 删除了单据 ' + (docToDelete ? docToDelete.name : docId),
-                    time: new Date().toLocaleString(),
-                    fileName: docToDelete ? docToDelete.name : '',
-                    uploader: CURRENT_USER,
-                    visibility: ['all']
-                };
-                var activities = JSON.parse(localStorage.getItem('activities') || '[]');
-                activities.unshift(activity);
-                localStorage.setItem('activities', JSON.stringify(activities));
+                    await deleteDocAPI(docId);
 
-                alert('单据已删除！');
-                loadDocs();
-                loadActivities();
+                    var activity = {
+                        text: CURRENT_USER + ' 删除了单据 ' + (docToDelete ? docToDelete.name : `ID: ${docId}`),
+                        fileName: docToDelete ? docToDelete.name : '',
+                        uploader: CURRENT_USER,
+                        visibility: 'all'
+                    };
+                    await addActivity(activity);
+
+                    alert('单据已删除！');
+                    loadDocs();
+                    loadActivities();
+                } catch (error) {
+                    console.error('Error deleting doc:', error);
+                    alert('删除失败，请检查网络连接。');
+                }
             }
         } else {
-            alert('抱歉，您没有权限删除此单据。\n(仅上传者或项目经理可删除)');
+            alert('抱歉，您没有权限删除此单据。');
         }
     }
 
-    function loadDocs() {
-        var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
-        var pendingTable = document.getElementById('pendingDocsBody');
-        var pendingCount = 0;
-        
-        pendingTable.innerHTML = '';
-        docs.forEach(function(doc) {
-            // 权限校验逻辑
-            var canSee = false;
-            if (IS_ADMIN) canSee = true;
-            if (doc.applicant === CURRENT_USER) canSee = true;
-            
-            // 多选可见性支持
-            var visArray = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
-            if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
-                canSee = true;
-            }
+    async function loadDocs() {
+        try {
+            const docs = await getDocs();
+            var pendingTable = document.getElementById('pendingDocsBody');
+            var pendingCount = 0;
 
-            if (canSee) {
-                // 仅统计本部门发起的待处理单证，但显示所有可见单证
-                if (doc.dept === REQUIRED_DEPT && doc.status === 'pending') pendingCount++;
-                
-                var tr = document.createElement('tr');
-                
-                // 状态显示
-                var statusDisplay = '';
-                if (doc.status === 'pending') {
-                    statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
-                } else if (doc.status === 'passed') {
-                    statusDisplay = '<span style="color: #52c41a;">已通过</span>';
-                } else if (doc.status === 'rejected') {
-                    statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
+            pendingTable.innerHTML = '';
+            docs.forEach(function(doc) {
+                var canSee = false;
+                if (IS_ADMIN || doc.applicant === CURRENT_USER) canSee = true;
+
+                var visArray = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
+                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
+                    canSee = true;
                 }
 
-                // 操作按钮
-                var actions = '<a href="#" class="action-link" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+JSON.stringify(doc.visibility).replace(/"/g, '&quot;')+'\', \''+doc.id+'\')">查看</a>';
-                if (doc.status === 'rejected' && doc.applicant === CURRENT_USER) {
-                    actions += ' | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload(\''+doc.id+'\')">重新上传</a>';
-                }
-                if (IS_ADMIN || doc.applicant === CURRENT_USER) {
-                    actions += ' | <a href="#" class="action-link" style="color: #ff4d4f;" onclick="deleteDoc(\''+doc.id+'\', \''+doc.applicant+'\')">删除</a>';
-                }
+                if (canSee) {
+                    if (doc.dept === REQUIRED_DEPT && doc.status === 'pending') pendingCount++;
 
-                tr.innerHTML = '<td>[ ' + doc.id + ' ]</td>' +
-                               '<td>[ ' + doc.type + ' ]</td>' +
-                               '<td>' + statusDisplay + '</td>' +
-                               '<td>[ ' + doc.applicant + ' ]</td>' +
-                               '<td>[ ' + doc.time + ' ]</td>' +
-                               '<td>' + actions + '</td>';
-                pendingTable.appendChild(tr);
-            }
-        });
-        document.getElementById('pendingCount').innerText = '[ ' + pendingCount + ' ]';
+                    var tr = document.createElement('tr');
+
+                    var statusDisplay = '';
+                    if (doc.status === 'pending') {
+                        statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
+                    } else if (doc.status === 'passed') {
+                        statusDisplay = '<span style="color: #52c41a;">已通过</span>';
+                    } else if (doc.status === 'rejected') {
+                        statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
+                    }
+
+                    const actions = `
+                        <a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '${doc.name}', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
+                        ${(doc.status === 'rejected' && doc.applicant === CURRENT_USER) ? ` | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload('${doc.id}')">重新上传</a>` : ''}
+                        ${(IS_ADMIN || doc.applicant === CURRENT_USER) ? ` | <a href="#" class="action-link" style="color: #ff4d4f;" onclick="deleteDoc('${doc.id}', '${doc.applicant}')">删除</a>` : ''}
+                    `;
+
+                    tr.innerHTML = `<td>[ ${doc.id} ]</td>
+                                  <td>[ ${doc.type} ]</td>
+                                  <td>${statusDisplay}</td>
+                                  <td>[ ${doc.applicant} ]</td>
+                                  <td>[ ${new Date(doc.createdAt).toLocaleString()} ]</td>
+                                  <td>${actions.trim()}</td>`;
+                    pendingTable.appendChild(tr);
+                }
+            });
+            document.getElementById('pendingCount').innerText = '[ ' + pendingCount + ' ]';
+        } catch (error) {
+            console.error('Error loading docs:', error);
+            document.getElementById('pendingDocsBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">加载单据列表失败，请检查网络连接。</td></tr>';
+        }
     }
 
-    function loadActivities() {
-        var activities = JSON.parse(localStorage.getItem('activities') || '[]');
-        var container = document.getElementById('activitiesBody');
-        container.innerHTML = '';
-        activities.slice(0, 5).forEach(function(item) {
-            var canSee = false;
-            if (IS_ADMIN) canSee = true;
-            if (item.uploader === CURRENT_USER) canSee = true;
-            if (item.visibility === 'all') canSee = true;
-            if (item.visibility === '财务部') canSee = true;
+    async function loadActivities() {
+        try {
+            const activities = await getActivities();
+            var container = document.getElementById('activitiesBody');
+            container.innerHTML = '';
+            activities.slice(0, 10).forEach(function(item) {
+                var canSee = false;
+                if (IS_ADMIN || item.uploader === CURRENT_USER) canSee = true;
 
-            if (canSee) {
-                var div = document.createElement('div');
-                div.className = 'activity-item';
-                div.innerText = '[ ' + item.text + ' ] - ' + item.time;
-                div.onclick = function() { viewFile(item.uploader, item.fileName, item.visibility); };
-                container.appendChild(div);
-            }
-        });
+                var visArray = Array.isArray(item.visibility) ? item.visibility : [item.visibility];
+                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
+                    canSee = true;
+                }
+
+                if (canSee) {
+                    var div = document.createElement('div');
+                    div.className = 'activity-item';
+                    div.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
+                    if (item.docId) {
+                        div.onclick = function() { viewFile(item.uploader, item.fileName, item.visibility, item.docId); };
+                        div.style.cursor = 'pointer';
+                    }
+                    container.appendChild(div);
+                }
+            });
+        } catch (error) {
+            console.error('Error loading activities:', error);
+            document.getElementById('activitiesBody').innerHTML = '<div style="color: red;">加载动态失败，请检查网络连接。</div>';
+        }
     }
 
     window.onload = function() {
@@ -648,14 +676,10 @@
         updateTime();
         var savedMemo = localStorage.getItem("userMemo");
         if (savedMemo) { document.getElementById("memoInput").value = savedMemo; }
-        
+
         window.addEventListener('storage', function(e) {
             if (e.key === 'userMemo') {
                 document.getElementById("memoInput").value = e.newValue;
-            }
-            if (e.key === 'allDocs' || e.key === 'activities') {
-                loadDocs();
-                loadActivities();
             }
         });
 
@@ -663,10 +687,16 @@
         loadActivities();
 
         document.addEventListener('click', function(e) {
-            if (!document.querySelector('.user-avatar').contains(e.target)) {
+            const userAvatar = document.querySelector('.user-avatar');
+            if (userAvatar && !userAvatar.contains(e.target)) {
                 document.getElementById('logoutMenu').style.display = 'none';
             }
         });
+
+        setInterval(() => {
+            loadDocs();
+            loadActivities();
+        }, 30000);
     }
 </script>
 </head>
