@@ -369,7 +369,7 @@
     // 如果没有授权，或者授权的部门不是当前部门（且不是项目管理），则拦截
     if (!authorizedDept || (authorizedDept !== REQUIRED_DEPT && authorizedDept !== '项目管理')) {
         alert('权限不足：请先登录并选择正确的部门。');
-        window.location.href = 'login.html'; 
+        window.location.href = 'index.html'; 
     }
 
     const CURRENT_USER = "仓储管理员B";
@@ -393,18 +393,16 @@
     }
 
     function logout() {
-        window.location.href = 'login.html';
+        sessionStorage.clear();
+        window.location.href = 'index.html';
     }
 
     var reuploadDocId = null;
 
-    // 模拟文件上传
+    // 模拟文件上传：第一步，选择文件
     function handleUpload() {
         var fileInput = document.getElementById('fileUpload');
-        if (fileInput.files.length === 0) {
-            alert('请选择要上传的文件！');
-            return;
-        }
+        if (fileInput.files.length === 0) return;
         
         var optionsPanel = document.getElementById('uploadOptions');
         optionsPanel.style.display = 'block';
@@ -414,16 +412,20 @@
             var doc = docs.find(d => d.id === reuploadDocId);
             if (doc) {
                 document.getElementById('docType').value = doc.type;
-                document.querySelectorAll('.vis-check').forEach(cb => {
-                    cb.checked = doc.visibility.includes(cb.value) || doc.visibility.includes('all');
-                });
+                // 预填复选框逻辑可以在这里添加
             }
         }
     }
 
+    // 第二步：确认最终上传
     function confirmUpload() {
         var fileInput = document.getElementById('fileUpload');
         var file = fileInput.files[0];
+        if (!file) {
+            alert('请先选择文件！');
+            return;
+        }
+
         var docType = document.getElementById('docType').value;
         
         var selectedVis = [];
@@ -496,8 +498,11 @@
         var canView = false;
         if (IS_ADMIN) canView = true;
         if (uploader === CURRENT_USER) canView = true;
+        
         if (Array.isArray(visibility)) {
-            if (visibility.includes('all') || visibility.includes(REQUIRED_DEPT) || visibility.includes(authorizedDept)) canView = true;
+            if (visibility.includes('all') || visibility.includes(REQUIRED_DEPT) || (authorizedDept && visibility.includes(authorizedDept))) {
+                canView = true;
+            }
         } else if (visibility === 'all' || visibility === REQUIRED_DEPT) {
             canView = true;
         }
@@ -505,7 +510,7 @@
         if (canView) {
             alert('正在预览文件: ' + fileName + '\n(权限校验通过)');
         } else {
-            alert('抱歉，您没有权限查看此文件。\n(权限限制)');
+            alert('抱歉，您没有权限查看此文件。\n(该文件设置了特定的可见部门)');
         }
     }
 
@@ -522,7 +527,7 @@
                     time: new Date().toLocaleString(),
                     fileName: docToDelete ? docToDelete.name : '',
                     uploader: CURRENT_USER,
-                    visibility: 'all'
+                    visibility: ['all']
                 };
                 var activities = JSON.parse(localStorage.getItem('activities') || '[]');
                 activities.unshift(activity);
@@ -544,12 +549,18 @@
         
         pendingTable.innerHTML = '';
         docs.forEach(function(doc) {
-            if (doc.dept === '仓储部') {
+            if (doc.dept === REQUIRED_DEPT) {
                 var canSee = false;
                 if (IS_ADMIN) canSee = true;
                 if (doc.applicant === CURRENT_USER) canSee = true;
-                if (doc.visibility === 'all') canSee = true;
-                if (doc.visibility === '仓储部') canSee = true;
+                
+                if (Array.isArray(doc.visibility)) {
+                    if (doc.visibility.includes('all') || doc.visibility.includes(REQUIRED_DEPT)) {
+                        canSee = true;
+                    }
+                } else if (doc.visibility === 'all' || doc.visibility === REQUIRED_DEPT) {
+                    canSee = true;
+                }
 
                 if (canSee) {
                     if (doc.status === 'pending') pendingCount++;
@@ -565,7 +576,7 @@
                         statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
                     }
 
-                    var actions = '<a href="#" class="action-link" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+doc.visibility+'\')">查看</a>';
+                    var actions = '<a href="#" class="action-link" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+JSON.stringify(doc.visibility).replace(/"/g, '&quot;')+'\')">查看</a>';
                     if (doc.status === 'rejected' && doc.applicant === CURRENT_USER) {
                         actions += ' | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload(\''+doc.id+'\')">重新上传</a>';
                     }
@@ -676,7 +687,7 @@
     <div class="main-content">
         <div class="top-banner">
             [ 仓储部 - 仓储管理 ]
-            <a href="index.html" class="switch-link">切换至其他业务... ▾</a>
+            <a href="login.html" class="switch-link">切换至其他业务... ▾</a>
         </div>
         
         <div class="content-inner">
