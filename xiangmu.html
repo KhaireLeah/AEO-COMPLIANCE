@@ -332,17 +332,56 @@
         window.location.href = 'index.html';
     }
 
+    function triggerDownload(dataUrl, fileName) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fileName || 'download';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
     async function viewFile(uploader, fileName, visibility, docId) {
         try {
             const docs = await getDocs();
             const doc = docs.find(d => d.id === docId);
 
             if (doc && doc.fileData) {
+                const displayName = fileName || doc.name || '文件';
+                const dataUrl = doc.fileData;
+                const isPreviewable = /^data:(application\/pdf|image\/|text\/)/i.test(dataUrl);
+
                 var win = window.open();
-                if (win) {
-                    win.document.write('<iframe src="' + doc.fileData + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+                if (!win) {
+                    triggerDownload(dataUrl, displayName);
+                    return;
+                }
+
+                if (isPreviewable) {
+                    win.document.write('<iframe src="' + dataUrl + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
                 } else {
-                    alert('弹出窗口被拦截，请允许弹出窗口后重试。');
+                    const safeName = String(displayName).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    const html = `
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${safeName}</title>
+</head>
+<body style="margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;">
+  <div style="padding:16px;">
+    <div style="font-size:16px; font-weight:600; margin-bottom:12px;">${safeName}</div>
+    <a href="${dataUrl}" download="${safeName}" style="display:inline-block; background:#1890ff; color:#fff; text-decoration:none; padding:10px 14px; border-radius:6px;">下载文件</a>
+    <div style="margin-top:10px; color: rgba(0,0,0,0.65); font-size:12px; line-height:1.6;">
+      当前文件格式浏览器可能无法直接预览，建议下载后打开（PDF/图片可直接预览）。
+    </div>
+  </div>
+</body>
+</html>`;
+                    win.document.open();
+                    win.document.write(html);
+                    win.document.close();
                 }
             } else {
                 alert('无法找到文件内容。文件可能已被删除或数据不完整。');
@@ -467,7 +506,7 @@
                             <td>[ ${doc.applicant} ]</td>
                             <td>[ ${new Date(doc.createdAt).toLocaleString()} ]</td>
                             <td>
-                                <a href="#" style="color:#1890ff; text-decoration:none;" onclick="viewFile('${doc.applicant}', '${doc.name}', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
+                                <a href="#" style="color:#1890ff; text-decoration:none;" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
                                 ${auditActions} | 
                                 <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}')">删除</a>
                             </td>`;
@@ -478,7 +517,7 @@
         Object.entries(depts).forEach(([deptName, tbodyId]) => {
             const tbody = document.getElementById(tbodyId);
             if (tbody.children.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无来自 ${deptName} 的单据</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#999;">暂无来自 ${deptName} 的单据</td></tr>`;
             }
         });
     }
