@@ -1,0 +1,647 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>项目管理 - 业务流程管理系统</title>
+<style type="text/css">
+	body {
+    background-color: #f0f2f5;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.header {
+    background-color: #fff;
+    padding: 0 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.right-menu {
+    display: flex;
+    align-items: center;
+}
+
+.help, .datetime {
+    margin-left: 16px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.sidebar {
+    background-color: #fff;
+    width: 256px;
+    height: calc(100vh - 64px);
+}
+
+.department-title {
+    padding: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.menu-item:hover, .menu-item.active {
+    background-color: #e6f7ff;
+}
+
+.menu-item-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+}
+
+.menu-item-text h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.menu-item-text p {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.main-content {
+    flex: 1;
+    padding: 0;
+    background-color: #f0f2f5;
+    height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.top-banner {
+    background-color: #2f54eb;
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    font-weight: bold;
+    position: relative;
+}
+
+.top-banner .switch-link {
+    position: absolute;
+    right: 24px;
+    font-size: 14px;
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.top-banner .switch-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.content-inner {
+    padding: 24px;
+}
+
+.stats-cards {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.card {
+    flex: 1;
+    border-radius: 8px;
+    padding: 24px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card.blue { background-color: #597ef7; }
+.card.yellow { background-color: #ffc53d; color: #333; }
+
+.card-title { font-size: 16px; margin-bottom: 12px; font-weight: 500; }
+.card-value { font-size: 28px; font-weight: bold; }
+
+.doc-section {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 24px;
+}
+
+.dept-header {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d39c4;
+    margin-bottom: 16px;
+    padding-left: 12px;
+    border-left: 4px solid #1d39c4;
+}
+
+.doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+}
+
+.doc-table th {
+    background-color: #f0f5ff;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #1d39c4;
+}
+
+.doc-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: rgba(0,0,0,0.85);
+}
+
+.activities-section {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.activities-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 12px;
+}
+
+.activity-item {
+    padding: 8px 0;
+    font-size: 14px;
+    color: rgba(0,0,0,0.65);
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.activity-item:hover {
+    color: #1890ff;
+}
+
+.memo-container {
+    margin: 120px 20px 20px 20px;
+    padding: 15px;
+    background-color: #FFF9C4; 
+    border: 1px solid #FBC02D;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.memo-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #827717;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #D4E157;
+    padding-bottom: 5px;
+}
+
+#memoInput {
+    width: 100%;
+    height: 250px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: #333;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+}
+
+/* Avatar Style */
+.user-avatar {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.user-avatar:hover {
+    transform: translateY(-2px);
+}
+
+.avatar-img {
+    width: 32px;
+    height: 32px;
+    background: #1890ff;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 18px;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0,0,0,0.85);
+}
+
+.logout-menu {
+    position: absolute;
+    bottom: 60px;
+    right: 0;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 8px 0;
+    display: none;
+    width: 100px;
+    text-align: center;
+}
+
+.logout-menu div {
+    padding: 8px;
+    font-size: 14px;
+    color: #ff4d4f;
+    cursor: pointer;
+}
+
+.logout-menu div:hover {
+    background: #fff1f0;
+}
+</style>
+<script type="text/javascript">
+    // 权限校验
+    const authorizedDept = sessionStorage.getItem('authorizedDept');
+    if (authorizedDept !== '项目管理') {
+        alert('权限不足：只有项目经理可以访问此页面。');
+        window.location.href = 'login.html';
+    }
+
+    const CURRENT_USER = "项目经理D";
+    const IS_ADMIN = true;
+
+    function updateTime() {
+        var now = new Date();
+        var timeStr = now.getFullYear() + "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-" + now.getDate().toString().padStart(2, '0') + " " + now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0');
+        var clock = document.getElementById("liveClock");
+        if(clock) { clock.innerHTML = timeStr; }
+    }
+
+    function saveMemo() {
+        var content = document.getElementById("memoInput").value;
+        localStorage.setItem("userMemo", content); 
+    }
+
+    function toggleLogoutMenu() {
+        var menu = document.getElementById('logoutMenu');
+        menu.style.display = (menu.style.display === 'block' ? 'none' : 'block');
+    }
+
+    function logout() {
+        sessionStorage.clear();
+        window.location.href = 'index.html';
+    }
+
+    function viewFile(uploader, fileName, visibility) {
+        var canView = false;
+        if (IS_ADMIN) canView = true;
+        if (uploader === CURRENT_USER) canView = true;
+        
+        // 多选可见性判断
+        if (Array.isArray(visibility)) {
+            if (visibility.includes('all') || visibility.includes('项目管理')) {
+                canView = true;
+            }
+        } else if (visibility === 'all' || visibility === '项目管理') {
+            canView = true;
+        }
+        
+        if (canView) {
+            alert('正在预览文件: ' + fileName + '\n(权限校验通过)');
+        } else {
+            alert('抱歉，您没有权限查看此文件。\n(权限限制)');
+        }
+    }
+
+    function deleteDoc(docId, uploader) {
+        if (IS_ADMIN || uploader === CURRENT_USER) {
+            if (confirm('确定要删除该单据吗？')) {
+                var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+                var docToDelete = docs.find(d => d.id === docId);
+                docs = docs.filter(d => d.id !== docId);
+                localStorage.setItem('allDocs', JSON.stringify(docs));
+
+                var activity = {
+                    text: CURRENT_USER + ' 删除了单据 ' + (docToDelete ? docToDelete.name : docId),
+                    time: new Date().toLocaleString(),
+                    fileName: docToDelete ? docToDelete.name : '',
+                    uploader: CURRENT_USER,
+                    visibility: ['all']
+                };
+                var activities = JSON.parse(localStorage.getItem('activities') || '[]');
+                activities.unshift(activity);
+                localStorage.setItem('activities', JSON.stringify(activities));
+
+                alert('单据已删除！');
+                loadAllDocs();
+                loadActivities();
+            }
+        } else {
+            alert('抱歉，您没有权限删除此单据。\n(仅上传者或项目经理可删除)');
+        }
+    }
+
+    // 新增：单据审核功能
+    function auditDoc(docId, action) {
+        var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+        var doc = docs.find(d => d.id === docId);
+        if (!doc) return;
+
+        var statusText = action === 'pass' ? 'passed' : 'rejected';
+        var actionLabel = action === 'pass' ? '通过了' : '退回了';
+        var statusLabel = action === 'pass' ? '已通过' : '被退回';
+
+        doc.status = statusText;
+        localStorage.setItem('allDocs', JSON.stringify(docs));
+
+        // 记录动态
+        var activity = {
+            text: CURRENT_USER + ' ' + actionLabel + ' 单据 ' + doc.name + ' [状态: ' + statusLabel + ']',
+            time: new Date().toLocaleString(),
+            fileName: doc.name,
+            uploader: CURRENT_USER,
+            visibility: ['all']
+        };
+        var activities = JSON.parse(localStorage.getItem('activities') || '[]');
+        activities.unshift(activity);
+        localStorage.setItem('activities', JSON.stringify(activities));
+
+        alert('操作成功：单据 ' + actionLabel);
+        loadAllDocs();
+        loadActivities();
+    }
+
+    function loadAllDocs() {
+        var docs = JSON.parse(localStorage.getItem('allDocs') || '[]');
+        var depts = ['业务部', '仓储部', '财务部'];
+        var totalCount = docs.length;
+        
+        document.getElementById('totalCount').innerText = '[ ' + totalCount + ' ]';
+
+        depts.forEach(function(dept) {
+            var tbodyId = '';
+            if (dept === '业务部') tbodyId = 'ywDocsBody';
+            else if (dept === '仓储部') tbodyId = 'ccDocsBody';
+            else if (dept === '财务部') tbodyId = 'cwDocsBody';
+
+            var tbody = document.getElementById(tbodyId);
+            tbody.innerHTML = '';
+            
+            var deptDocs = docs.filter(d => d.dept === dept);
+            if (deptDocs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无单据</td></tr>';
+            } else {
+                deptDocs.forEach(function(doc) {
+                    var tr = document.createElement('tr');
+                    
+                    // 状态显示
+                    var statusDisplay = '';
+                    if (doc.status === 'pending') {
+                        statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
+                    } else if (doc.status === 'passed') {
+                        statusDisplay = '<span style="color: #52c41a;">已通过</span>';
+                    } else if (doc.status === 'rejected') {
+                        statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
+                    }
+
+                    // 审核操作按钮
+                    var auditActions = '';
+                    if (doc.status === 'pending') {
+                        auditActions = ' | <a href="#" style="color:#52c41a; text-decoration:none;" onclick="auditDoc(\''+doc.id+'\', \'pass\')">通过</a> | ' +
+                                       '<a href="#" style="color:#fa8c16; text-decoration:none;" onclick="auditDoc(\''+doc.id+'\', \'reject\')">退回</a>';
+                    }
+
+                    tr.innerHTML = '<td>[ ' + doc.id + ' ]</td>' +
+                                   '<td>[ ' + doc.type + ' ]</td>' +
+                                   '<td>' + statusDisplay + '</td>' +
+                                   '<td>[ ' + doc.applicant + ' ]</td>' +
+                                   '<td>[ ' + doc.time + ' ]</td>' +
+                                   '<td>' +
+                                   '<a href="#" style="color:#1890ff; text-decoration:none;" onclick="viewFile(\''+doc.applicant+'\', \''+doc.name+'\', \''+JSON.stringify(doc.visibility).replace(/"/g, '&quot;')+'\', \''+doc.id+'\')">查看</a>' +
+                                   auditActions + ' | ' +
+                                   '<a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc(\''+doc.id+'\', \''+doc.applicant+'\')">删除</a>' +
+                                   '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+        });
+    }
+
+    function loadActivities() {
+        var activities = JSON.parse(localStorage.getItem('activities') || '[]');
+        var container = document.getElementById('activitiesBody');
+        container.innerHTML = '';
+        activities.slice(0, 10).forEach(function(item) {
+            var canSee = false;
+            if (IS_ADMIN) canSee = true;
+            if (item.uploader === CURRENT_USER) canSee = true;
+            
+            if (Array.isArray(item.visibility)) {
+                if (item.visibility.includes('all') || item.visibility.includes('项目管理')) canSee = true;
+            } else if (item.visibility === 'all' || item.visibility === '项目管理') {
+                canSee = true;
+            }
+
+            if (canSee) {
+                var div = document.createElement('div');
+                div.className = 'activity-item';
+                div.innerText = '[ ' + item.text + ' ] - ' + item.time;
+                div.onclick = function() { viewFile(item.uploader, item.fileName, item.visibility); };
+                container.appendChild(div);
+            }
+        });
+    }
+
+    window.onload = function() {
+        setInterval(updateTime, 1000);
+        updateTime();
+        var savedMemo = localStorage.getItem("userMemo");
+        if (savedMemo) { document.getElementById("memoInput").value = savedMemo; }
+        
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'userMemo') {
+                document.getElementById("memoInput").value = e.newValue;
+            }
+            if (e.key === 'allDocs' || e.key === 'activities') {
+                loadAllDocs();
+                loadActivities();
+            }
+        });
+
+        loadAllDocs();
+        loadActivities();
+
+        document.addEventListener('click', function(e) {
+            if (!document.querySelector('.user-avatar').contains(e.target)) {
+                document.getElementById('logoutMenu').style.display = 'none';
+            }
+        });
+    }
+</script>
+</head>
+
+<body>
+<div class="header">
+    <div class="logo">BPM System</div>
+    <div class="right-menu">
+        <div class="help"><a href="news.html" style="text-decoration: none; color: inherit;">② 帮助</a></div>
+        <div id="liveClock" class="datetime"></div>
+    </div>
+</div>
+<div style="display: flex;">
+    <div class="sidebar">
+        <div class="department-title">部门分类</div>
+        <div class="menu-item" onclick="window.location.href='yewu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>业务部</h4>
+            </div>
+        </div>
+        <div class="menu-item" onclick="window.location.href='cangchu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMjEuOCA4LjdsLTEuNC0xLjVMNy43IDQuNCA2LjMgNS44bDEyLjUgMTEuMmwzLjEtMy4xYy42LS42LjYtMS41IDAtMi4xek0xNy41IDEuOWwtMS40IDEuNEwzLjggMTUuOGwtMS40IDEuNGMtLjYtLjYtMS41LS42LTIuMSAwcy0uNiAxLjUgMCAyLjFsMy41IDMuNWMyLjIgMi4yIDUuOCAyLjIgOCAwTDIxLjggOC43Yy42LS42LjYtMS41IDAtMi4xek0xNiAxMy4ybDEuNCAxLjRMMTAuMiAyMWwtMS40LTEuNEwxNiAxMy4yeiIvPjwvc3ZnPg==" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>仓储部</h4>
+            </div>
+        </div>
+        <div class="menu-item" onclick="window.location.href='caiwu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>财务部</h4>
+            </div>
+        </div>
+        <div class="menu-item active" onclick="window.location.href='xiangmu.html'">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNzI2MmZkIiBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMzhjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTQgNCAxLjc5IDQgNC0xLjc5IDQtNCA0em0wLTEwYy0yLjc2IDAtNS0yLjI0LTUtNXMyLjI0LTUgNS01IDUgMi4yNCA1IDUtMi4yNCA1LTUgNXoiLz48L3N2Zz4=" alt="" class="menu-item-icon">
+            <div class="menu-item-text">
+                <h4>项目管理</h4>
+            </div>
+        </div>
+        <div class="memo-container">
+            <div class="memo-title">备忘录</div>
+            <textarea id="memoInput" onkeyup="saveMemo()"></textarea>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="top-banner">
+            [ 项目管理 - 全局概览 ]
+            <a href="login.html" class="switch-link">切换至其他业务... ▾</a>
+        </div>
+        
+        <div class="content-inner">
+            <div class="stats-cards">
+                <div class="card blue">
+                    <div class="card-title">系统运行状态</div>
+                    <div class="card-value">[ 正常运行中 ]</div>
+                </div>
+                <div class="card yellow">
+                    <div class="card-title">全院单据汇总</div>
+                    <div class="card-value" id="totalCount">[ 0 ]</div>
+                </div>
+            </div>
+
+            <div class="doc-section">
+                <div class="dept-header">业务部单据</div>
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th>项目ID</th>
+                            <th>单证类型</th>
+                            <th>状态</th>
+                            <th>上传人</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ywDocsBody"></tbody>
+                </table>
+
+                <div class="dept-header" style="color: #fa8c16; border-color: #fa8c16;">仓储部单据</div>
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th>项目ID</th>
+                            <th>单据类型</th>
+                            <th>状态</th>
+                            <th>上传人</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ccDocsBody"></tbody>
+                </table>
+
+                <div class="dept-header" style="color: #52c41a; border-color: #52c41a;">财务部单据</div>
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th>项目ID</th>
+                            <th>单据类型</th>
+                            <th>状态</th>
+                            <th>上传人</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cwDocsBody"></tbody>
+                </table>
+            </div>
+
+            <div class="activities-section">
+                <div class="activities-title">系统全域动态</div>
+                <div id="activitiesBody">
+                    <!-- 由 JS 填充 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avatar UI -->
+<div class="user-avatar" onclick="toggleLogoutMenu()">
+    <div class="avatar-img">👤</div>
+    <div class="user-name">已登录: 项目经理D</div>
+    <div class="logout-menu" id="logoutMenu">
+        <div onclick="logout()">退出登录</div>
+    </div>
+</div>
+
+</body>
+</html>
