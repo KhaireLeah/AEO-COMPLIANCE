@@ -751,6 +751,25 @@
 
         try {
             const doc = docId ? await getDoc(docId) : null;
+            let canView = false;
+            if (IS_ADMIN) canView = true;
+
+            const visArray = parseVisibilityInput(visibility);
+            if (uploader && uploader === CURRENT_USER) canView = true;
+            if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canView = true;
+
+            if (!canView && doc) {
+                const docUploader = doc.applicant || uploader || '';
+                const docVis = parseVisibilityInput(doc.visibility);
+                if (docUploader && docUploader === CURRENT_USER) canView = true;
+                if (docVis.includes('all') || docVis.includes(REQUIRED_DEPT)) canView = true;
+            }
+
+            if (!canView) {
+                win.close();
+                alert('权限不足：无法查看该文件。');
+                return;
+            }
 
             if (doc && doc.fileData) {
                 const displayName = fileName || doc.name || '文件';
@@ -819,7 +838,7 @@
                     text: `${CURRENT_USER} 删除了单据 ${docToDelete.name || `ID: ${docId}`}`,
                     fileName: docToDelete.name || '',
                     uploader: CURRENT_USER,
-                    visibility: 'all',
+                    visibility: (docToDelete.visibility != null ? docToDelete.visibility : 'all'),
                     projectId: normalizeProjectId(docToDelete.projectId) || getCurrentProjectId(),
                     docId: docId
                 };
@@ -1101,7 +1120,7 @@
             text: `${CURRENT_USER} 更新了台账 ${doc.name || ''}`,
             fileName: doc.name || '',
             uploader: CURRENT_USER,
-            visibility: 'all',
+            visibility: (updated.visibility != null ? updated.visibility : (doc.visibility != null ? doc.visibility : 'all')),
             docId: docId,
             projectId: projectId
         });
@@ -1450,7 +1469,7 @@
                 <td>${doc.applicant || '-'}</td>
                 <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'}</td>
                 <td>
-                    <a href="#" class="action-link" onclick="viewFile('', '', '', '${doc.id}')">查看</a>
+                    <a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
                     |
                     <a href="#" class="action-link" onclick="openLedgerEdit('${doc.id}')">编辑</a>
                     | <a href="#" class="action-link" style="color:#ff4d4f;" onclick="deleteDoc('${doc.id}')">删除</a>
@@ -1593,12 +1612,10 @@
             const projectId = getCurrentProjectId();
             const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
             const docs = (docsAll || []).filter(d => {
-                if (!d || !d.projectId) return projectId === DEFAULT_PROJECT_ID;
-                return normalizeProjectId(String(d.projectId).trim()) === projectId;
+                return normalizeProjectId((d || {}).projectId) === projectId;
             });
             const acts = (actsAll || []).filter(a => {
-                if (!a || !a.projectId) return projectId === DEFAULT_PROJECT_ID;
-                return normalizeProjectId(String(a.projectId).trim()) === projectId;
+                return normalizeProjectId((a || {}).projectId) === projectId;
             });
 
             STATE.docs = docs;
