@@ -659,13 +659,17 @@
     function normalizeProjectId(pid) {
         const raw = (pid == null) ? '' : String(pid).trim();
         if (!raw) return DEFAULT_PROJECT_ID;
+        if (raw !== '项目01' && raw !== '项目02') return DEFAULT_PROJECT_ID;
         return raw;
     }
 
     function getCurrentProjectId() {
         const pid = sessionStorage.getItem('currentProjectId') || localStorage.getItem('bpmCurrentProjectId');
         const norm = normalizeProjectId(pid);
-        if (norm) sessionStorage.setItem('currentProjectId', norm);
+        if (norm) {
+            sessionStorage.setItem('currentProjectId', norm);
+            localStorage.setItem('bpmCurrentProjectId', norm);
+        }
         return norm;
     }
 

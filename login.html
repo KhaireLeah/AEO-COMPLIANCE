@@ -612,6 +612,8 @@
         function normalizeProjectId(pid) {
             const raw = (pid == null) ? '' : String(pid).trim();
             if (!raw) return PROJECTS[0].id;
+            const ids = PROJECTS.map(p => p.id);
+            if (!ids.includes(raw)) return PROJECTS[0].id;
             return raw;
         }
 
