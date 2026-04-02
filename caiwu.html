@@ -780,28 +780,48 @@
             const projectId = getCurrentProjectId();
             var container = document.getElementById('activitiesBody');
             container.innerHTML = '';
-            activities.slice(0, 10).forEach(function(item) {
+            let shown = 0;
+            activities.forEach(function(item) {
+                if (shown >= 20) return;
                 const itemProjectId = normalizeProjectId(item.projectId);
                 if (itemProjectId !== projectId) return;
                 var canSee = false;
                 if (IS_ADMIN || item.uploader === CURRENT_USER) canSee = true;
-
                 var visArray = Array.isArray(item.visibility) ? item.visibility : [item.visibility];
-                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
-                    canSee = true;
-                }
+                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canSee = true;
 
                 if (canSee) {
+                    shown++;
                     var div = document.createElement('div');
                     div.className = 'activity-item';
-                    div.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
+                    div.style.display = 'flex';
+                    div.style.justifyContent = 'space-between';
+                    div.style.alignItems = 'center';
+                    div.style.borderBottom = '1px solid #f5f5f5';
+                    div.style.paddingBottom = '8px';
+
+                    var textSpan = document.createElement('span');
+                    textSpan.style.flex = '1';
+                    textSpan.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
+                    div.appendChild(textSpan);
+
                     if (item.docId) {
-                        div.onclick = function() { viewFile(item.uploader, item.fileName, item.visibility, item.docId); };
-                        div.style.cursor = 'pointer';
+                        var openBtn = document.createElement('a');
+                        openBtn.href = '#';
+                        openBtn.style.cssText = 'color:#1890ff; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:12px; background:#f0f7ff; padding:3px 8px; border-radius:4px; border:1px solid #91caff;';
+                        openBtn.innerText = '📄 打开文件';
+                        openBtn.onclick = function(e) {
+                            e.preventDefault();
+                            viewFile(item.uploader, item.fileName, item.visibility, item.docId);
+                        };
+                        div.appendChild(openBtn);
                     }
                     container.appendChild(div);
                 }
             });
+            if (shown === 0) {
+                container.innerHTML = '<div style="color:rgba(0,0,0,0.45); font-size:13px; padding:8px 0;">暂无动态</div>';
+            }
         } catch (error) {
             console.error('Error loading activities:', error);
             document.getElementById('activitiesBody').innerHTML = '<div style="color: red;">加载动态失败，请检查网络连接。</div>';
@@ -951,7 +971,10 @@
             </div>
 
             <div class="activities-section">
-                <div class="activities-title">最新动态 (财务)</div>
+                <div class="activities-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>最新动态 (财务)</span>
+                    <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
+                </div>
                 <div id="activitiesBody">
                     <!-- 由 JS 填充 -->
                 </div>

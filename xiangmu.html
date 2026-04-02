@@ -238,6 +238,107 @@
     padding: 6px 0;
 }
 
+.ledger-hint {
+    color: rgba(0,0,0,0.45);
+    font-size: 13px;
+    margin: 6px 0 12px;
+}
+
+.history-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(24,144,255,0.12);
+    color: #1890ff;
+    font-weight: 800;
+    font-size: 12px;
+    margin-left: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+    padding: 18px;
+}
+
+.modal h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+}
+
+.modal p {
+    margin: 0 0 14px;
+    color: rgba(0,0,0,0.45);
+    font-size: 13px;
+}
+
+.modal label {
+    display: block;
+    font-size: 12px;
+    color: rgba(0,0,0,0.65);
+    margin: 10px 0 6px;
+}
+
+.modal input, .modal textarea, .modal select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    outline: none;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.modal textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.btn {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.btn-primary {
+    background: #1890ff;
+    border-color: #1890ff;
+    color: #fff;
+}
+
+.btn-primary:hover { opacity: 0.92; }
+
 .activities-section {
     background: white;
     border-radius: 8px;
@@ -502,6 +603,173 @@
         lastActivityByDocId: {}
     };
 
+    function getLedgerHistory(doc) {
+        const h = doc && doc.ledgerHistory;
+        return Array.isArray(h) ? h : [];
+    }
+
+    function normalizeTags(input) {
+        if (!input) return [];
+        if (Array.isArray(input)) return input.map(x => String(x)).filter(Boolean);
+        return String(input).split(/[,，]/).map(s => s.trim()).filter(Boolean);
+    }
+
+    function openLedgerEdit(docId) {
+        const doc = STATE.docs.find(d => d.id === docId);
+        if (!doc) return;
+
+        const mask = document.getElementById('ledgerEditMask');
+        const idEl = document.getElementById('ledgerEditDocId');
+        const catEl = document.getElementById('ledgerEditCategory');
+        const noteEl = document.getElementById('ledgerEditNote');
+        const tagsEl = document.getElementById('ledgerEditTags');
+        const auditBlock = document.getElementById('ledgerAuditBlock');
+        const auditEl = document.getElementById('ledgerEditAudit');
+
+        idEl.value = docId;
+        const categories = Array.from(new Set(STATE.docs.map(d => getTypeCategory(d.type)))).sort();
+        catEl.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        catEl.value = (doc.ledgerCategory || getTypeCategory(doc.type)) || (categories[0] || '其他');
+
+        noteEl.value = doc.ledgerNote || '';
+        tagsEl.value = Array.isArray(doc.ledgerTags) ? doc.ledgerTags.join(',') : (doc.ledgerTags || '');
+
+        if (IS_ADMIN) {
+            auditBlock.style.display = '';
+            auditEl.value = doc.status || 'pending';
+        } else {
+            auditBlock.style.display = 'none';
+        }
+
+        mask.style.display = 'flex';
+        setTimeout(() => noteEl.focus(), 0);
+    }
+
+    function closeLedgerEdit() {
+        document.getElementById('ledgerEditMask').style.display = 'none';
+        document.getElementById('ledgerEditDocId').value = '';
+    }
+
+    async function saveLedgerEdit() {
+        const docId = document.getElementById('ledgerEditDocId').value;
+        if (!docId) return;
+
+        const doc = await getDoc(docId);
+        if (!doc) return;
+
+        const projectId = getCurrentProjectId();
+        if (normalizeProjectId(doc.projectId) !== projectId) {
+            alert('仅允许修改当前项目组的台账。');
+            closeLedgerEdit();
+            return;
+        }
+
+        const catEl = document.getElementById('ledgerEditCategory');
+        const noteEl = document.getElementById('ledgerEditNote');
+        const tagsEl = document.getElementById('ledgerEditTags');
+        const auditEl = document.getElementById('ledgerEditAudit');
+
+        const nextCategory = catEl.value || getTypeCategory(doc.type);
+        const nextNote = noteEl.value || '';
+        const nextTags = normalizeTags(tagsEl.value);
+
+        const prev = {
+            ledgerCategory: doc.ledgerCategory || '',
+            ledgerNote: doc.ledgerNote || '',
+            ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags)
+        };
+
+        const changes = {};
+        if (prev.ledgerCategory !== nextCategory) changes.ledgerCategory = { from: prev.ledgerCategory, to: nextCategory };
+        if (prev.ledgerNote !== nextNote) changes.ledgerNote = { from: prev.ledgerNote, to: nextNote };
+        if (JSON.stringify(prev.ledgerTags) !== JSON.stringify(nextTags)) changes.ledgerTags = { from: prev.ledgerTags, to: nextTags };
+
+        let nextStatus = doc.status || 'pending';
+        if (IS_ADMIN) {
+            const desired = auditEl.value || 'pending';
+            if (desired !== nextStatus) {
+                changes.status = { from: nextStatus, to: desired };
+                nextStatus = desired;
+            }
+        }
+
+        if (Object.keys(changes).length === 0) {
+            closeLedgerEdit();
+            return;
+        }
+
+        const history = getLedgerHistory(doc);
+        history.unshift({
+            time: new Date().toISOString(),
+            user: CURRENT_USER,
+            changes
+        });
+
+        const updated = {
+            ...doc,
+            ledgerCategory: nextCategory,
+            ledgerNote: nextNote,
+            ledgerTags: nextTags,
+            ledgerUpdatedAt: new Date().toISOString(),
+            ledgerUpdatedBy: CURRENT_USER,
+            ledgerHistory: history
+        };
+
+        if (IS_ADMIN) {
+            updated.status = nextStatus;
+        }
+
+        await updateDoc(docId, updated);
+        await addActivity({
+            text: `${CURRENT_USER} 更新了台账 ${doc.name || ''}`,
+            fileName: doc.name || '',
+            uploader: CURRENT_USER,
+            visibility: 'all',
+            docId: docId,
+            projectId: projectId
+        });
+
+        closeLedgerEdit();
+        refreshData();
+    }
+
+    function openHistory(docId) {
+        const doc = STATE.docs.find(d => d.id === docId);
+        if (!doc) return;
+        const mask = document.getElementById('historyMask');
+        const sub = document.getElementById('historySub');
+        const body = document.getElementById('historyBody');
+        const history = getLedgerHistory(doc);
+
+        sub.textContent = `单据：${doc.name || doc.id} · 共 ${history.length} 条记录`;
+        if (history.length === 0) {
+            body.innerHTML = '<div class="panel-empty">暂无修改记录</div>';
+        } else {
+            body.innerHTML = history.map(h => {
+                const time = h.time ? new Date(h.time).toLocaleString() : '';
+                const user = h.user || '-';
+                const changes = h.changes || {};
+                const lines = Object.keys(changes).map(k => {
+                    const c = changes[k];
+                    const from = (c && c.from != null) ? JSON.stringify(c.from) : '';
+                    const to = (c && c.to != null) ? JSON.stringify(c.to) : '';
+                    return `<div style="font-size:12px;color:rgba(0,0,0,0.65);margin-top:6px;"><span style="font-weight:800;">${k}</span>：${from} → ${to}</div>`;
+                }).join('');
+                return `<div style="border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:12px;margin-bottom:10px;">
+                    <div style="font-weight:800;">${user} · ${time}</div>
+                    ${lines}
+                </div>`;
+            }).join('');
+        }
+
+        mask.style.display = 'flex';
+    }
+
+    function closeHistory() {
+        document.getElementById('historyMask').style.display = 'none';
+        document.getElementById('historyBody').innerHTML = '';
+    }
+
     function getDeptDisplay(dept) {
         if (dept === '业务部') return '单证部';
         if (dept === '仓储部') return '物流部';
@@ -580,18 +848,20 @@
             const lastText = last && last.text ? String(last.text) : '';
             const lastTime = last && last.createdAt ? new Date(last.createdAt).toLocaleString() : '';
             const lastLine = lastText ? `<div style="font-size:12px;color:rgba(0,0,0,0.45);margin-top:4px;">最新：${lastText}${lastTime ? ` · ${lastTime}` : ''}</div>` : '';
+            const historyCount = getLedgerHistory(doc).length;
+            const historyBadge = historyCount > 0 ? `<span class="history-badge" onclick="openHistory('${doc.id}')">${historyCount}</span>` : '';
 
             tr.innerHTML = `
                 <td>[ ${formatProjectId(doc.projectId)} ]</td>
-                <td>[ ${category} / ${doc.type || '-'} ]</td>
+                <td>[ ${category} / ${doc.type || '-'} ]${historyBadge}</td>
                 <td>${getAuditDisplay(doc)}</td>
                 <td>${getProcessDisplay(doc)}${lastLine}</td>
                 <td>[ ${getDeptDisplay(doc.dept)} ]</td>
                 <td>[ ${doc.applicant || '-'} ]</td>
                 <td>[ ${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'} ]</td>
                 <td>
-                    <a href="#" style="color:#1890ff; text-decoration:none;" onclick="viewFile('${doc.applicant || ''}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
-                    | <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}')">删除</a>
+                    <a href="#" style="color:#1890ff; text-decoration:none;" onclick="openLedgerEdit('${doc.id}')">编辑</a>
+                    ${IS_ADMIN ? ` | <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}')">删除</a>` : ''}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -618,16 +888,35 @@
         items.slice(0, 20).forEach(item => {
             const div = document.createElement('div');
             div.className = 'activity-item';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.borderBottom = '1px solid #f5f5f5';
+            div.style.paddingBottom = '6px';
+
             const doc = item.docId ? STATE.docs.find(d => d.id === item.docId) : null;
             const category = doc ? getTypeCategory(doc.type) : '';
             const dept = doc ? getDeptDisplay(doc.dept) : '';
             const meta = [category, dept].filter(Boolean).join(' · ');
             const time = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
-            div.innerText = `[ ${item.text}${meta ? ` (${meta})` : ''} ] - ${time}`;
+
+            const textSpan = document.createElement('span');
+            textSpan.style.flex = '1';
+            textSpan.innerText = `[ ${item.text}${meta ? ` (${meta})` : ''} ] - ${time}`;
+            div.appendChild(textSpan);
+
             if (item.docId) {
-                div.onclick = () => viewFile(item.uploader || '', item.fileName || '', item.visibility, item.docId);
-                div.style.cursor = 'pointer';
+                const openBtn = document.createElement('a');
+                openBtn.href = '#';
+                openBtn.style.cssText = 'color:#1d39c4; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:12px; background:#f0f5ff; padding:3px 8px; border-radius:4px; border:1px solid #adc6ff;';
+                openBtn.innerText = '📄 打开文件';
+                openBtn.onclick = (e) => {
+                    e.preventDefault();
+                    viewFile(item.uploader || '', item.fileName || '', item.visibility, item.docId);
+                };
+                div.appendChild(openBtn);
             }
+
             container.appendChild(div);
         });
     }
@@ -722,6 +1011,13 @@
             }
         });
 
+        document.getElementById('ledgerEditMask').addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'ledgerEditMask') closeLedgerEdit();
+        });
+        document.getElementById('historyMask').addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'historyMask') closeHistory();
+        });
+
         // Set a poller to refresh data periodically
         setInterval(() => {
             refreshData();
@@ -789,7 +1085,11 @@
             </div>
 
             <div class="doc-section">
-                <div class="dept-header">单证台账</div>
+                <div class="dept-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>📋 单证台账</span>
+                    <span style="font-size:12px; font-weight:400; color:#1d39c4; opacity:0.8; background:#f0f5ff; padding:4px 12px; border-radius:20px;">本项目组共享 · 全员可见可编辑 · 审核仅限项目经理</span>
+                </div>
+                <div class="ledger-hint">台账分类、备注、标签：本项目组所有成员均可修改。审核状态字段仅项目经理可更改。文件打开入口在下方“单证动态”处点击条目。</div>
                 <div class="ledger-filters">
                     <select id="filterDept">
                         <option value="all">全部部门</option>
@@ -824,7 +1124,10 @@
             </div>
 
             <div class="activities-section">
-                <div class="activities-title">单证动态</div>
+                <div class="activities-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>单证动态</span>
+                    <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
+                </div>
                 <div class="activity-panels" id="activityPanels">
                     <details open>
                         <summary>上传 / 更新 <span id="countUpload">[ 0 ]</span></summary>
@@ -854,6 +1157,43 @@
     <div class="user-name">已登录: 项目经理D</div>
     <div class="logout-menu" id="logoutMenu">
         <div onclick="logout()">退出登录</div>
+    </div>
+</div>
+
+<div class="modal-mask" id="ledgerEditMask">
+    <div class="modal" role="dialog" aria-modal="true">
+        <h3>编辑台账</h3>
+        <p id="ledgerEditSub">仅影响当前项目组的台账字段，不改变文件内容。</p>
+        <input type="hidden" id="ledgerEditDocId">
+        <label>台账分类</label>
+        <select id="ledgerEditCategory"></select>
+        <label>台账备注</label>
+        <textarea id="ledgerEditNote" placeholder="例如：缺失装箱单签章，待补充；HS 编码待确认..."></textarea>
+        <label>台账标签</label>
+        <input id="ledgerEditTags" placeholder="用逗号分隔，例如：风险,加急,待补充">
+        <div id="ledgerAuditBlock">
+            <label>审核状态（仅项目经理）</label>
+            <select id="ledgerEditAudit">
+                <option value="pending">待审核</option>
+                <option value="passed">已通过</option>
+                <option value="rejected">被退回</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeLedgerEdit()">取消</button>
+            <button class="btn btn-primary" onclick="saveLedgerEdit()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-mask" id="historyMask">
+    <div class="modal" role="dialog" aria-modal="true">
+        <h3>修改历史</h3>
+        <p id="historySub">显示该单据台账字段的修改记录。</p>
+        <div id="historyBody" style="max-height: 360px; overflow:auto;"></div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="closeHistory()">关闭</button>
+        </div>
     </div>
 </div>
 

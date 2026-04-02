@@ -531,15 +531,8 @@
         }
 
         var docType = document.getElementById('docType').value;
-        var selectedVis = [];
-        document.querySelectorAll('.vis-check:checked').forEach(cb => {
-            selectedVis.push(cb.value);
-        });
-
-        if (selectedVis.length === 0) {
-            alert('请至少选择一个可见部门！');
-            return;
-        }
+        // 单证存储：默认全员可见（本项目组）
+        var selectedVis = ['all'];
 
         // Show a loading indicator
         const uploadButton = document.querySelector('.btn-upload[onclick="confirmUpload()"]');
@@ -552,7 +545,7 @@
                 var fileData = e.target.result; // Base64 data
                 const projectId = getCurrentProjectId();
 
-                const activityText = CURRENT_USER + (reuploadDocId ? ' 重新上传了单据 ' : ' 上传了单据 ') + file.name;
+                const activityText = CURRENT_USER + (reuploadDocId ? ' 重新存入了单据 ' : ' 存入了单据 ') + file.name;
                 let docId = reuploadDocId;
 
                 if (reuploadDocId) {
@@ -572,7 +565,7 @@
                             visibility: selectedVis
                         };
                         await updateDoc(reuploadDocId, updatedDoc);
-                        alert('单据已重新上传，等待再次审核！');
+                    alert('单据已重新存入，等待再次审核！');
                     }
                     reuploadDocId = null;
                 } else {
@@ -614,7 +607,7 @@
             } finally {
                 // Reset UI
                 uploadButton.disabled = false;
-                uploadButton.textContent = '确认上传';
+                uploadButton.textContent = '确认存入';
                 document.getElementById('uploadOptions').style.display = 'none';
                 fileInput.value = '';
                 loadDocs();
@@ -798,29 +791,50 @@
             const projectId = getCurrentProjectId();
             var container = document.getElementById('activitiesBody');
             container.innerHTML = '';
-            activities.slice(0, 10).forEach(function(item) { // Show more activities
+            let shown = 0;
+            activities.forEach(function(item) {
+                if (shown >= 20) return;
                 const itemProjectId = normalizeProjectId(item.projectId);
                 if (itemProjectId !== projectId) return;
                 var canSee = false;
                 if (IS_ADMIN || item.uploader === CURRENT_USER) canSee = true;
-
                 var visArray = Array.isArray(item.visibility) ? item.visibility : [item.visibility];
-                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
-                    canSee = true;
-                }
+                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canSee = true;
 
                 if (canSee) {
+                    shown++;
                     var div = document.createElement('div');
                     div.className = 'activity-item';
-                    // Link activity to the document view function
-                    div.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
+                    div.style.display = 'flex';
+                    div.style.justifyContent = 'space-between';
+                    div.style.alignItems = 'center';
+                    div.style.borderBottom = '1px solid #f5f5f5';
+                    div.style.paddingBottom = '8px';
+
+                    var textSpan = document.createElement('span');
+                    textSpan.style.flex = '1';
+                    textSpan.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
+
+                    div.appendChild(textSpan);
+
                     if (item.docId) {
-                        div.onclick = function() { viewFile(item.uploader, item.fileName, item.visibility, item.docId); };
-                        div.style.cursor = 'pointer';
+                        var openBtn = document.createElement('a');
+                        openBtn.href = '#';
+                        openBtn.style.cssText = 'color:#1890ff; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:12px; background:#f0f7ff; padding:3px 8px; border-radius:4px; border:1px solid #91caff;';
+                        openBtn.innerText = '📄 打开文件';
+                        openBtn.onclick = function(e) {
+                            e.preventDefault();
+                            viewFile(item.uploader, item.fileName, item.visibility, item.docId);
+                        };
+                        div.appendChild(openBtn);
                     }
+
                     container.appendChild(div);
                 }
             });
+            if (shown === 0) {
+                container.innerHTML = '<div style="color:rgba(0,0,0,0.45); font-size:13px; padding:8px 0;">暂无单证动态</div>';
+            }
         } catch (error) {
             console.error('Error loading activities:', error);
             document.getElementById('activitiesBody').innerHTML = '<div style="color: red;">加载动态失败，请检查网络连接。</div>';
@@ -924,9 +938,13 @@
             </div>
 
             <div class="doc-section">
-                <div class="tabs">
-                    <div class="tab active">[ 未处理单证 ]</div>
-                    <div class="tab">已处理单证</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <div class="tabs" style="margin-bottom:0; border:none;">
+                        <div class="tab active">[ 单证存储列表 ]</div>
+                    </div>
+                    <a href="xiangmu.html" style="display:inline-flex; align-items:center; gap:6px; background:#f0f7ff; border:1px solid #91caff; color:#1890ff; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:600; text-decoration:none; cursor:pointer;">
+                        📋 查看项目台账
+                    </a>
                 </div>
                 <table class="doc-table">
                     <thead>
@@ -935,7 +953,7 @@
                             <th>单证类型</th>
                             <th>审核状态</th>
                             <th>申请人</th>
-                            <th>停留时间</th>
+                            <th>存入时间</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -957,25 +975,21 @@
                                 <option value="其他">其他</option>
                             </select>
                         </div>
-                        <div class="option-group">
-                            <label>设置可见权限 (多选)</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666;">
-                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="all"> 所有人可见</label>
-                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="项目管理"> 项目管理</label>
-                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="业务部" checked> 业务部</label>
-                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="仓储部"> 仓储部</label>
-                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="财务部"> 财务部</label>
-                            </div>
+                        <div class="option-group" style="background:#fffbe6; border:1px solid #ffe58f; border-radius:6px; padding:8px 10px; font-size:12px; color:#856404;">
+                            📌 存入后，本项目组所有成员均可见，台账管理请前往<strong>项目管理</strong>页面。
                         </div>
-                        <button class="btn-upload" onclick="confirmUpload()" style="width: 100%; margin-top: 10px;">确认上传</button>
+                        <button class="btn-upload" onclick="confirmUpload()" style="width: 100%; margin-top: 10px;">确认存入</button>
                     </div>
                     <input type="file" id="fileUpload" style="display: none;" onchange="handleUpload()">
-                    <button class="btn-upload" onclick="document.getElementById('fileUpload').click()">上传新单据</button>
+                    <button class="btn-upload" onclick="document.getElementById('fileUpload').click()">存入新单据</button>
                 </div>
             </div>
 
             <div class="activities-section">
-                <div class="activities-title">最新动态 (单证)</div>
+                <div class="activities-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>单证动态</span>
+                    <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
+                </div>
                 <div id="activitiesBody">
                     <!-- 由 JS 填充 -->
                 </div>
