@@ -696,7 +696,7 @@
     function normalizeProjectId(pid) {
         const raw = (pid == null) ? '' : String(pid).trim();
         if (!raw) return DEFAULT_PROJECT_ID;
-        if (raw !== '项目01' && raw !== '项目02') return DEFAULT_PROJECT_ID;
+        if (raw !== '项目01') return DEFAULT_PROJECT_ID;
         return raw;
     }
 
