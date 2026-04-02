@@ -7,28 +7,72 @@ if (typeof window !== 'undefined' && window && typeof window.alert === 'function
     window.alert = function() {};
 }
 
+async function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+}
+
+async function fetchJsonWithRetry(url, options) {
+    const maxAttempts = 3;
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timeoutMs = 8000;
+        const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+        try {
+            const response = await fetch(url, { ...(options || {}), signal: controller ? controller.signal : undefined });
+            if (timer) clearTimeout(timer);
+            if (!response.ok) {
+                const err = new Error(`HTTP ${response.status}`);
+                err.status = response.status;
+                throw err;
+            }
+            return await response.json();
+        } catch (e) {
+            if (timer) clearTimeout(timer);
+            lastError = e;
+            const status = e && e.status;
+            const shouldRetry = attempt < maxAttempts && (status === 429 || status >= 500 || status == null);
+            if (!shouldRetry) break;
+            const delay = status === 429 ? 1500 * attempt : 500 * attempt;
+            await sleep(delay);
+        }
+    }
+    throw lastError || new Error('Request failed');
+}
+
+function writeCache(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+    } catch (e) {}
+}
+
+function readCache(key) {
+    try {
+        const cached = safeJsonParse(localStorage.getItem(key) || '', null);
+        return cached && Array.isArray(cached.data) ? cached.data : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 // --- Document Functions ---
 
 async function getDocs() {
     try {
-        const response = await fetch(DOCS_URL + '?sortBy=createdAt&order=desc');
-        if (!response.ok) throw new Error('Network response was not ok.');
-        return await response.json();
+        const data = await fetchJsonWithRetry(DOCS_URL + '?sortBy=createdAt&order=desc&limit=500');
+        writeCache('bpmCacheDocs', data);
+        return data;
     } catch (error) {
         console.error('Failed to fetch docs:', error);
-        alert('无法从服务器获取单据数据，请检查网络连接。');
-        return [];
+        return readCache('bpmCacheDocs') || [];
     }
 }
 
 async function getDoc(id) {
     try {
-        const response = await fetch(`${DOCS_URL}/${id}`);
-        if (!response.ok) throw new Error('Failed to fetch doc.');
-        return await response.json();
+        return await fetchJsonWithRetry(`${DOCS_URL}/${id}`);
     } catch (error) {
         console.error('Failed to fetch doc:', error);
-        alert('无法从服务器获取单据详情，请检查网络连接。');
         return null;
     }
 }
@@ -37,44 +81,35 @@ async function addDoc(doc) {
     try {
         const payload = {...doc, createdAt: new Date().toISOString()};
         if (typeof payload.projectId === 'string') payload.projectId = payload.projectId.trim();
-        const response = await fetch(DOCS_URL, {
+        return await fetchJsonWithRetry(DOCS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error('Failed to add doc.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to add doc:', error);
-        alert('上传单据失败，请稍后重试。');
     }
 }
 
 async function updateDoc(id, updatedData) {
     try {
-        const response = await fetch(`${DOCS_URL}/${id}`, {
+        return await fetchJsonWithRetry(`${DOCS_URL}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedData),
         });
-        if (!response.ok) throw new Error('Failed to update doc.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to update doc:', error);
-        alert('更新单据失败，请稍后重试。');
     }
 }
 
 async function deleteDocAPI(id) {
     try {
-        const response = await fetch(`${DOCS_URL}/${id}`, {
+        return await fetchJsonWithRetry(`${DOCS_URL}/${id}`, {
             method: 'DELETE',
         });
-        if (!response.ok) throw new Error('Failed to delete doc.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to delete doc:', error);
-        alert('删除单据失败，请稍后重试。');
     }
 }
 
@@ -82,48 +117,40 @@ async function deleteDocAPI(id) {
 
 async function getActivities() {
     try {
-        const response = await fetch(ACTIVITIES_URL + '?sortBy=createdAt&order=desc&limit=200');
-        if (!response.ok) throw new Error('Network response was not ok.');
-        return await response.json();
+        const data = await fetchJsonWithRetry(ACTIVITIES_URL + '?sortBy=createdAt&order=desc&limit=500');
+        writeCache('bpmCacheActivities', data);
+        return data;
     } catch (error) {
         console.error('Failed to fetch activities:', error);
-        alert('无法从服务器获取动态数据，请检查网络连接。');
-        return [];
+        return readCache('bpmCacheActivities') || [];
     }
 }
 
 async function getActivitiesPage(page, limit) {
     const p = Number(page) || 1;
     const l = Number(limit) || 200;
-    const response = await fetch(ACTIVITIES_URL + `?page=${p}&limit=${l}&sortBy=createdAt&order=desc`);
-    if (!response.ok) throw new Error('Network response was not ok.');
-    return await response.json();
+    return await fetchJsonWithRetry(ACTIVITIES_URL + `?page=${p}&limit=${l}&sortBy=createdAt&order=desc`);
 }
 
 async function addActivity(activity) {
     try {
         const payload = {...activity, createdAt: new Date().toISOString()};
         if (typeof payload.projectId === 'string') payload.projectId = payload.projectId.trim();
-        const response = await fetch(ACTIVITIES_URL, {
+        return await fetchJsonWithRetry(ACTIVITIES_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error('Failed to add activity.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to add activity:', error);
-        alert('记录动态失败：动态面板可能不会更新。请检查网络连接。');
     }
 }
 
 async function deleteActivityAPI(id) {
     try {
-        const response = await fetch(`${ACTIVITIES_URL}/${id}`, {
+        return await fetchJsonWithRetry(`${ACTIVITIES_URL}/${id}`, {
             method: 'DELETE',
         });
-        if (!response.ok) throw new Error('Failed to delete activity.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to delete activity:', error);
     }
@@ -131,13 +158,11 @@ async function deleteActivityAPI(id) {
 
 async function updateActivityAPI(id, data) {
     try {
-        const response = await fetch(`${ACTIVITIES_URL}/${id}`, {
+        return await fetchJsonWithRetry(`${ACTIVITIES_URL}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });
-        if (!response.ok) throw new Error('Failed to update activity.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to update activity:', error);
     }
@@ -147,12 +172,12 @@ async function updateActivityAPI(id, data) {
 
 async function getNotifications() {
     try {
-        const response = await fetch(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc&limit=500');
-        if (!response.ok) throw new Error('Failed to fetch notifications.');
-        return await response.json();
+        const data = await fetchJsonWithRetry(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc&limit=500');
+        writeCache('bpmCacheNotifications', data);
+        return data;
     } catch (error) {
         console.error('Failed to fetch notifications:', error);
-        return [];
+        return readCache('bpmCacheNotifications') || [];
     }
 }
 
@@ -162,13 +187,11 @@ async function addNotification(notification) {
         if (payload && payload.createdAt == null) payload.createdAt = new Date().toISOString();
         if (payload && payload.isRead == null) payload.isRead = false;
         if (typeof payload.projectId === 'string') payload.projectId = payload.projectId.trim();
-        const response = await fetch(NOTIFICATIONS_URL, {
+        return await fetchJsonWithRetry(NOTIFICATIONS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error('Failed to add notification.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to add notification:', error);
     }
@@ -176,13 +199,11 @@ async function addNotification(notification) {
 
 async function updateNotification(id, data) {
     try {
-        const response = await fetch(`${NOTIFICATIONS_URL}/${id}`, {
+        return await fetchJsonWithRetry(`${NOTIFICATIONS_URL}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });
-        if (!response.ok) throw new Error('Failed to update notification.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to update notification:', error);
     }
@@ -190,11 +211,9 @@ async function updateNotification(id, data) {
 
 async function deleteNotification(id) {
     try {
-        const response = await fetch(`${NOTIFICATIONS_URL}/${id}`, {
+        return await fetchJsonWithRetry(`${NOTIFICATIONS_URL}/${id}`, {
             method: 'DELETE',
         });
-        if (!response.ok) throw new Error('Failed to delete notification.');
-        return await response.json();
     } catch (error) {
         console.error('Failed to delete notification:', error);
     }

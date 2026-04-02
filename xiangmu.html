@@ -1786,6 +1786,8 @@
     }
 
     async function refreshData() {
+        if (window.__pmRefreshInFlight) return;
+        window.__pmRefreshInFlight = true;
         try {
             const projectId = getCurrentProjectId();
             const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
@@ -1829,12 +1831,14 @@
             initTypeFilter();
             renderLedger();
             renderActivityPanels();
-            setInlineNotice('数据加载失败：请检查网络连接或 MockAPI 是否可用。');
+            setInlineNotice('数据加载失败：' + (error && error.message ? error.message : String(error || '未知错误')));
             document.getElementById('totalCount').innerText = '[ N/A ]';
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) pendingEl.innerText = 'N/A';
             const tbody = document.getElementById('ledgerBody');
             if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
+        } finally {
+            window.__pmRefreshInFlight = false;
         }
     }
 
@@ -1882,9 +1886,10 @@
 
         // Set a poller to refresh data periodically
         setInterval(() => {
+            if (document.hidden) return;
             refreshData();
             loadNotifications();
-        }, 5000); // Changed from 15s to 5s for better real-time feel
+        }, 20000);
     }
 </script>
 </head>

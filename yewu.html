@@ -1652,8 +1652,7 @@
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
 
         // Initial data load
-        loadDocs();
-        loadActivities();
+        refreshData();
         loadNotifications();
 
         // Hide logout menu on outside click
@@ -1666,10 +1665,10 @@
 
         // Set a poller to refresh data periodically, simulating real-time updates
         setInterval(() => {
-            loadDocs();
-            loadActivities();
+            if (document.hidden) return;
+            refreshData();
             loadNotifications();
-        }, 5000); // Changed to 5s for better real-time feel
+        }, 20000);
     }
 </script>
 </head>

@@ -1643,8 +1643,7 @@
         const userNameEl = document.querySelector('.user-name');
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
 
-        loadDocs();
-        loadActivities();
+        refreshData();
         loadNotifications();
 
         document.addEventListener('click', function(e) {
@@ -1655,10 +1654,10 @@
         });
 
         setInterval(() => {
-            loadDocs();
-            loadActivities();
+            if (document.hidden) return;
+            refreshData();
             loadNotifications();
-        }, 5000);
+        }, 20000);
     }
 </script>
 </head>
