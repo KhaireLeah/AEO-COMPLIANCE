@@ -277,6 +277,7 @@
 .doc-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .doc-table th {
@@ -285,6 +286,8 @@
     text-align: left;
     font-weight: 600;
     color: #1d39c4;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .doc-table td {
@@ -1020,11 +1023,46 @@
         return String(input).split(/[,，]/).map(s => s.trim()).filter(Boolean);
     }
 
-    function openLedgerEdit(docId) {
-        if (!IS_ADMIN) {
-            alert('仅项目经理可编辑台账及审核状态。');
+    let editVisBound = false;
+
+    function applyEditVisibilityUI() {
+        const allCb = document.querySelector('.edit-vis-check[value="all"]');
+        const otherCbs = Array.from(document.querySelectorAll('.edit-vis-check')).filter(cb => cb.value !== 'all');
+        if (allCb && allCb.checked) {
+            otherCbs.forEach(cb => {
+                cb.checked = false;
+                cb.disabled = true;
+                if (cb.parentElement) cb.parentElement.style.display = 'none';
+            });
+        } else {
+            otherCbs.forEach(cb => {
+                cb.disabled = false;
+                if (cb.parentElement) cb.parentElement.style.display = '';
+            });
+        }
+    }
+
+    function onEditVisibilityChange(e) {
+        const target = e && e.target;
+        if (!target) return;
+        if (target.value === 'all') {
+            applyEditVisibilityUI();
             return;
         }
+        const allCb = document.querySelector('.edit-vis-check[value="all"]');
+        if (allCb && allCb.checked) allCb.checked = false;
+        applyEditVisibilityUI();
+    }
+
+    function bindEditVisibility() {
+        if (editVisBound) return;
+        editVisBound = true;
+        document.querySelectorAll('.edit-vis-check').forEach(cb => {
+            cb.addEventListener('change', onEditVisibilityChange);
+        });
+    }
+
+    function openLedgerEdit(docId) {
         const doc = STATE.docs.find(d => d.id === docId);
         if (!doc) return;
 
@@ -1044,12 +1082,15 @@
         noteEl.value = doc.ledgerNote || '';
         tagsEl.value = Array.isArray(doc.ledgerTags) ? doc.ledgerTags.join(',') : (doc.ledgerTags || '');
 
-        // Load visibility
+        const allowVisEdit = (IS_ADMIN || doc.applicant === CURRENT_USER);
+        const visBlock = document.getElementById('ledgerVisBlock');
+        if (visBlock) visBlock.style.display = allowVisEdit ? '' : 'none';
+
         const visChecks = document.querySelectorAll('.edit-vis-check');
         const currentVis = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
-        visChecks.forEach(cb => {
-            cb.checked = currentVis.includes(cb.value);
-        });
+        visChecks.forEach(cb => cb.checked = currentVis.includes(cb.value));
+        bindEditVisibility();
+        applyEditVisibilityUI();
 
         if (IS_ADMIN) {
             auditBlock.style.display = '';
@@ -1084,26 +1125,30 @@
         const nextNote = noteEl.value || '';
         const nextTags = normalizeTags(tagsEl.value);
 
-        // Get visibility from checkboxes
-        const visChecks = document.querySelectorAll('.edit-vis-check');
-        const nextVisibility = Array.from(visChecks).filter(cb => cb.checked).map(cb => cb.value);
-        if (nextVisibility.length === 0) {
-            alert('请至少选择一个可见部门。');
-            return;
+        const allowVisEdit = (IS_ADMIN || doc.applicant === CURRENT_USER);
+        const prevVisibility = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
+        let nextVisibility = prevVisibility;
+        if (allowVisEdit) {
+            const visChecks = document.querySelectorAll('.edit-vis-check');
+            nextVisibility = Array.from(visChecks).filter(cb => cb.checked).map(cb => cb.value);
+            if (nextVisibility.length === 0) {
+                alert('请至少选择一个可见部门。');
+                return;
+            }
         }
 
         const prev = {
             ledgerCategory: doc.ledgerCategory || '',
             ledgerNote: doc.ledgerNote || '',
             ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags),
-            visibility: Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility]
+            visibility: prevVisibility
         };
 
         const changes = {};
         if (prev.ledgerCategory !== nextCategory) changes.ledgerCategory = { from: prev.ledgerCategory, to: nextCategory };
         if (prev.ledgerNote !== nextNote) changes.ledgerNote = { from: prev.ledgerNote, to: nextNote };
         if (JSON.stringify(prev.ledgerTags) !== JSON.stringify(nextTags)) changes.ledgerTags = { from: prev.ledgerTags, to: nextTags };
-        if (JSON.stringify(prev.visibility) !== JSON.stringify(nextVisibility)) changes.visibility = { from: prev.visibility, to: nextVisibility };
+        if (allowVisEdit && JSON.stringify(prev.visibility) !== JSON.stringify(nextVisibility)) changes.visibility = { from: prev.visibility, to: nextVisibility };
 
         let nextStatus = doc.status || 'pending';
         if (IS_ADMIN) {
@@ -1131,11 +1176,11 @@
             ledgerCategory: nextCategory,
             ledgerNote: nextNote,
             ledgerTags: nextTags,
-            visibility: nextVisibility,
             ledgerUpdatedAt: new Date().toISOString(),
             ledgerUpdatedBy: CURRENT_USER,
             ledgerHistory: history
         };
+        if (allowVisEdit) updated.visibility = nextVisibility;
 
         if (IS_ADMIN) {
             updated.status = nextStatus;
@@ -1796,8 +1841,8 @@
 <!-- Modals -->
 <div class="modal-mask" id="ledgerEditMask">
     <div class="modal">
-        <h3>台账编辑 (仅经理可用)</h3>
-        <p id="ledgerEditTitle">更新单据的分类、备注及审核状态</p>
+        <h3>台账编辑</h3>
+        <p id="ledgerEditTitle">本项目组共享台账：全员可编辑；可见性仅上传者可改；审核仅项目经理可改。</p>
         <input type="hidden" id="ledgerEditDocId">
         
         <label>台账分类</label>
@@ -1810,7 +1855,7 @@
         <input type="text" id="ledgerEditTags" placeholder="例如：紧急, 待补录">
         
         <label>可见性权限 (Visibility)</label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666; margin-top: 5px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
+        <div id="ledgerVisBlock" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666; margin-top: 5px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="all"> 所有人可见</label>
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="项目管理"> 项目管理</label>
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="业务部"> 业务部</label>

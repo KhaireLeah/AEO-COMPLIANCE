@@ -267,6 +267,7 @@
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 24px;
+    table-layout: fixed;
 }
 
 .doc-table th {
@@ -275,6 +276,8 @@
     text-align: left;
     font-weight: 600;
     color: #1d39c4;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .doc-table td {
@@ -837,6 +840,45 @@
         return String(input).split(/[,，]/).map(s => s.trim()).filter(Boolean);
     }
 
+    let editVisBound = false;
+
+    function applyEditVisibilityUI() {
+        const allCb = document.querySelector('.edit-vis-check[value="all"]');
+        const otherCbs = Array.from(document.querySelectorAll('.edit-vis-check')).filter(cb => cb.value !== 'all');
+        if (allCb && allCb.checked) {
+            otherCbs.forEach(cb => {
+                cb.checked = false;
+                cb.disabled = true;
+                if (cb.parentElement) cb.parentElement.style.display = 'none';
+            });
+        } else {
+            otherCbs.forEach(cb => {
+                cb.disabled = false;
+                if (cb.parentElement) cb.parentElement.style.display = '';
+            });
+        }
+    }
+
+    function onEditVisibilityChange(e) {
+        const target = e && e.target;
+        if (!target) return;
+        if (target.value === 'all') {
+            applyEditVisibilityUI();
+            return;
+        }
+        const allCb = document.querySelector('.edit-vis-check[value="all"]');
+        if (allCb && allCb.checked) allCb.checked = false;
+        applyEditVisibilityUI();
+    }
+
+    function bindEditVisibility() {
+        if (editVisBound) return;
+        editVisBound = true;
+        document.querySelectorAll('.edit-vis-check').forEach(cb => {
+            cb.addEventListener('change', onEditVisibilityChange);
+        });
+    }
+
     function openLedgerEdit(docId) {
         const doc = STATE.docs.find(d => d.id === docId);
         if (!doc) return;
@@ -856,6 +898,14 @@
 
         noteEl.value = doc.ledgerNote || '';
         tagsEl.value = Array.isArray(doc.ledgerTags) ? doc.ledgerTags.join(',') : (doc.ledgerTags || '');
+
+        const allowVisEdit = (IS_ADMIN || doc.applicant === CURRENT_USER);
+        const visBlock = document.getElementById('ledgerVisBlock');
+        if (visBlock) visBlock.style.display = allowVisEdit ? '' : 'none';
+        const currentVis = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
+        document.querySelectorAll('.edit-vis-check').forEach(cb => cb.checked = currentVis.includes(cb.value));
+        bindEditVisibility();
+        applyEditVisibilityUI();
 
         if (IS_ADMIN) {
             auditBlock.style.display = '';
@@ -973,13 +1023,25 @@
         const prev = {
             ledgerCategory: doc.ledgerCategory || '',
             ledgerNote: doc.ledgerNote || '',
-            ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags)
+            ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags),
+            visibility: Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility]
         };
 
         const changes = {};
         if (prev.ledgerCategory !== nextCategory) changes.ledgerCategory = { from: prev.ledgerCategory, to: nextCategory };
         if (prev.ledgerNote !== nextNote) changes.ledgerNote = { from: prev.ledgerNote, to: nextNote };
         if (JSON.stringify(prev.ledgerTags) !== JSON.stringify(nextTags)) changes.ledgerTags = { from: prev.ledgerTags, to: nextTags };
+
+        const allowVisEdit = (IS_ADMIN || doc.applicant === CURRENT_USER);
+        let nextVisibility = prev.visibility;
+        if (allowVisEdit) {
+            nextVisibility = Array.from(document.querySelectorAll('.edit-vis-check')).filter(cb => cb.checked).map(cb => cb.value);
+            if (nextVisibility.length === 0) {
+                alert('请至少选择一个可见部门。');
+                return;
+            }
+            if (JSON.stringify(prev.visibility) !== JSON.stringify(nextVisibility)) changes.visibility = { from: prev.visibility, to: nextVisibility };
+        }
 
         let nextStatus = doc.status || 'pending';
         if (IS_ADMIN) {
@@ -1011,6 +1073,7 @@
             ledgerUpdatedBy: CURRENT_USER,
             ledgerHistory: history
         };
+        if (allowVisEdit) updated.visibility = nextVisibility;
 
         if (IS_ADMIN) {
             updated.status = nextStatus;
@@ -1548,6 +1611,7 @@
         if (filterAudit) filterAudit.addEventListener('change', renderLedger);
         if (filterType) filterType.addEventListener('change', renderLedger);
 
+        initVisibilityControls();
         refreshData();
 
         document.addEventListener('click', e => {
@@ -1736,6 +1800,16 @@
                     </select>
                 </div>
                 <table class="doc-table">
+                    <colgroup>
+                        <col style="width: 90px;">
+                        <col style="width: 220px;">
+                        <col style="width: 90px;">
+                        <col style="width: 220px;">
+                        <col style="width: 110px;">
+                        <col style="width: 120px;">
+                        <col style="width: 180px;">
+                        <col style="width: 110px;">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>项目</th>
@@ -1800,6 +1874,16 @@
         <textarea id="ledgerEditNote" placeholder="例如：缺失装箱单签章，待补充；HS 编码待确认..."></textarea>
         <label>台账标签</label>
         <input id="ledgerEditTags" placeholder="用逗号分隔，例如：风险,加急,待补充">
+        <div id="ledgerVisBlock">
+            <label>可见性权限（上传者可改）</label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:12px; color:#666; margin-top:5px; background:#f9f9f9; padding:10px; border-radius:8px;">
+                <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" class="edit-vis-check" value="all"> 所有人可见</label>
+                <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" class="edit-vis-check" value="项目管理"> 项目管理</label>
+                <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" class="edit-vis-check" value="业务部"> 业务部</label>
+                <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" class="edit-vis-check" value="仓储部"> 仓储部</label>
+                <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" class="edit-vis-check" value="财务部"> 财务部</label>
+            </div>
+        </div>
         <div id="ledgerAuditBlock">
             <label>审核状态（仅项目经理）</label>
             <select id="ledgerEditAudit">

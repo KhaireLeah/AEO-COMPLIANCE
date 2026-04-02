@@ -76,7 +76,7 @@ async function deleteDocAPI(id) {
 
 async function getActivities() {
     try {
-        const response = await fetch(ACTIVITIES_URL + '?sortBy=createdAt&order=desc&limit=15');
+        const response = await fetch(ACTIVITIES_URL + '?sortBy=createdAt&order=desc&limit=200');
         if (!response.ok) throw new Error('Network response was not ok.');
         return await response.json();
     } catch (error) {
