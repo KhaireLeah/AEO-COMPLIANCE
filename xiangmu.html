@@ -742,10 +742,23 @@
         a.remove();
     }
 
+    function setInlineNotice(text) {
+        const el = document.getElementById('pmInlineNotice');
+        if (!el) return;
+        const t = String(text || '').trim();
+        if (!t) {
+            el.style.display = 'none';
+            el.textContent = '';
+            return;
+        }
+        el.textContent = t;
+        el.style.display = 'block';
+    }
+
     async function viewFile(uploader, fileName, visibility, docId) {
         const win = window.open();
         if (!win) {
-            alert('无法打开预览窗口：请允许浏览器弹出窗口后重试。');
+            setInlineNotice('无法打开预览窗口：请允许浏览器弹出窗口后重试。');
             return;
         }
 
@@ -754,7 +767,10 @@
         win.document.close();
 
         try {
-            const doc = docId ? await getDoc(docId) : null;
+            let doc = docId ? await getDoc(docId) : null;
+            if (!doc && docId) {
+                doc = (STATE.docs || []).find(d => d && d.id === docId) || null;
+            }
             let canView = false;
             if (IS_ADMIN) canView = true;
 
@@ -770,8 +786,10 @@
             }
 
             if (!canView) {
-                win.close();
-                alert('权限不足：无法查看该文件。');
+                const safeMsg = '权限不足：无法查看该文件。';
+                win.document.open();
+                win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>无法查看</title></head><body style="font-family: -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", Roboto, \\"Helvetica Neue\\", Arial, \\"Noto Sans\\", sans-serif; padding:16px;">' + safeMsg + '</body></html>');
+                win.document.close();
                 return;
             }
 
@@ -1620,6 +1638,56 @@
         refreshData();
     }
 
+    async function repairProjectIds() {
+        if (!IS_ADMIN) return;
+        const statusEl = document.getElementById('repairStatus');
+        const setStatus = (t) => { if (statusEl) statusEl.textContent = t || ''; };
+
+        const ok = confirm('即将执行“项目号修复”：把所有单据/动态中非“项目01”的 projectId 统一改为“项目01”。\n该操作会批量写入数据库，是否继续？');
+        if (!ok) return;
+
+        try {
+            setStatus('修复中…');
+            const targetProjectId = '项目01';
+
+            const docsAll = await getDocs();
+            const docTargets = (docsAll || []).filter(d => d && String(d.projectId || '').trim() !== targetProjectId);
+
+            let fixedDocs = 0;
+            const docIds = docTargets.map(d => d.id).filter(Boolean);
+            for (let i = 0; i < docIds.length; i += 6) {
+                const chunk = docTargets.slice(i, i + 6);
+                await Promise.all(chunk.map(d => updateDoc(d.id, { ...d, projectId: targetProjectId })));
+                fixedDocs += chunk.length;
+                setStatus(`修复中…单据 ${fixedDocs}/${docTargets.length}`);
+            }
+
+            const acts = [];
+            for (let page = 1; page <= 80; page++) {
+                const batch = await getActivitiesPage(page, 200);
+                if (!Array.isArray(batch) || batch.length === 0) break;
+                acts.push(...batch);
+                if (batch.length < 200) break;
+                setStatus(`修复中…拉取动态第 ${page} 页`);
+            }
+
+            const actTargets = (acts || []).filter(a => a && String(a.projectId || '').trim() !== targetProjectId);
+            let fixedActs = 0;
+            for (let i = 0; i < actTargets.length; i += 6) {
+                const chunk = actTargets.slice(i, i + 6);
+                await Promise.all(chunk.map(a => updateActivityAPI(a.id, { ...a, projectId: targetProjectId })));
+                fixedActs += chunk.length;
+                setStatus(`修复中…动态 ${fixedActs}/${actTargets.length}`);
+            }
+
+            setStatus(`修复完成：单据 ${fixedDocs} 条，动态 ${fixedActs} 条`);
+            refreshData();
+        } catch (error) {
+            console.error('repairProjectIds failed:', error);
+            setStatus('修复失败：请在控制台查看错误');
+        }
+    }
+
     function renderActivityPanel(panelId, items) {
         const container = document.getElementById(panelId);
         if (!container) return;
@@ -1968,7 +2036,8 @@
                     <span>📋 单证台账</span>
                     <span style="font-size:12px; font-weight:400; color:#1d39c4; opacity:0.8; background:#f0f5ff; padding:4px 12px; border-radius:20px;">本项目组共享 · 全员可见可编辑 · 审核仅限项目经理</span>
                 </div>
-                <div class="ledger-hint">台账分类、备注、标签：本项目组所有成员均可修改。审核状态字段仅项目经理可更改。文件打开入口在下方“单证动态”处点击条目。</div>
+                <div class="ledger-hint">台账分类、备注、标签：本项目组所有成员均可修改。审核状态字段仅项目经理可更改。查看文件可点台账“查看”，或在下方“单证动态”点条目。</div>
+                <div id="pmInlineNotice" style="display:none; margin-top:10px; padding:10px 12px; border:1px solid #ffd666; background:#fffbe6; border-radius:10px; color:rgba(0,0,0,0.75); font-size:13px;"></div>
                 <div class="ledger-filters">
                     <select id="filterDept">
                         <option value="all">全部部门</option>
@@ -2020,6 +2089,8 @@
                         <div id="activityAdminTools" style="display:none; gap:8px; align-items:center;">
                             <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="purgeDeleteActivities()">清理删除动态</button>
                             <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="purgeAllActivities()">清空本项目动态</button>
+                            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="repairProjectIds()">修复项目号</button>
+                            <span id="repairStatus" style="font-size:12px; color:rgba(0,0,0,0.65);"></span>
                         </div>
                         <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
                     </div>

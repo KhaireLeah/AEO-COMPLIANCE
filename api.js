@@ -129,6 +129,20 @@ async function deleteActivityAPI(id) {
     }
 }
 
+async function updateActivityAPI(id, data) {
+    try {
+        const response = await fetch(`${ACTIVITIES_URL}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update activity.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to update activity:', error);
+    }
+}
+
 // --- Notification Functions ---
 
 async function getNotifications() {
