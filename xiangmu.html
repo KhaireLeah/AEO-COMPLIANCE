@@ -941,7 +941,6 @@
         const noteEl = document.getElementById('ledgerEditNote');
         const tagsEl = document.getElementById('ledgerEditTags');
         const auditBlock = document.getElementById('ledgerAuditBlock');
-        const auditEl = document.getElementById('ledgerEditAudit');
 
         idEl.value = docId;
         const categories = Array.from(new Set(STATE.docs.map(d => getTypeCategory(d.type)))).sort();
@@ -959,10 +958,33 @@
         bindEditVisibility();
         applyEditVisibilityUI();
 
-        if (auditBlock) auditBlock.style.display = 'none';
+        if (auditBlock) auditBlock.style.display = IS_ADMIN ? '' : 'none';
+        const auditStatusEl = document.getElementById('ledgerAuditStatusText');
+        if (auditStatusEl) {
+            const status = String(doc.status || 'pending');
+            const cn = status === 'passed' ? '已通过' : (status === 'rejected' ? '被退回' : '待审核');
+            auditStatusEl.textContent = cn;
+        }
+        const approveBtn = document.getElementById('ledgerAuditApprove');
+        const rejectBtn = document.getElementById('ledgerAuditReject');
+        const revertBtn = document.getElementById('ledgerAuditRevert');
+        if (approveBtn && rejectBtn && revertBtn) {
+            const status = String(doc.status || 'pending');
+            approveBtn.style.display = (status === 'pending') ? '' : 'none';
+            rejectBtn.style.display = (status === 'pending') ? '' : 'none';
+            revertBtn.style.display = (status === 'pending') ? 'none' : '';
+        }
 
         mask.style.display = 'flex';
         setTimeout(() => noteEl.focus(), 0);
+    }
+
+    async function auditFromLedgerEdit(status) {
+        if (!IS_ADMIN) return;
+        const docId = document.getElementById('ledgerEditDocId').value;
+        if (!docId) return;
+        await setAuditStatus(docId, status);
+        closeLedgerEdit();
     }
 
     function closeLedgerEdit() {
@@ -1043,7 +1065,6 @@
             projectId: getCurrentProjectId(),
             createdAt: new Date().toISOString()
         });
-        await trySendEmailToUser(userId, title, content);
     }
 
     async function saveLedgerEdit() {
@@ -1464,16 +1485,6 @@
             const editLink = `<a href="#" class="action-link" onclick="openLedgerEdit('${doc.id}')">编辑</a>`;
             const delLink = `<a href="#" class="action-link" style="color:#ff4d4f;" onclick="deleteDoc('${doc.id}')">删除</a>`;
 
-            let auditLinks = '';
-            if (IS_ADMIN) {
-                if ((doc.status || 'pending') === 'pending') {
-                    auditLinks = ` | <a href="#" class="action-link" style="color:#52c41a;" onclick="setAuditStatus('${doc.id}', 'passed')">通过</a>
-                    | <a href="#" class="action-link" style="color:#ff4d4f;" onclick="setAuditStatus('${doc.id}', 'rejected')">退回</a>`;
-                } else {
-                    auditLinks = ` | <a href="#" class="action-link" style="color:#fa8c16;" onclick="setAuditStatus('${doc.id}', 'pending')">撤销</a>`;
-                }
-            }
-
             tr.innerHTML = `
                 <td>${formatProjectId(doc.projectId)}</td>
                 <td>${category} / ${doc.type || '-'} ${historyBadge}</td>
@@ -1485,7 +1496,6 @@
                 <td>
                     ${viewLink}
                     | ${editLink}
-                    ${auditLinks}
                     | ${delLink}
                 </td>
             `;
@@ -1854,6 +1864,10 @@
             if (e.key === 'userMemo') {
                 document.getElementById("memoInput").value = e.newValue;
             }
+            if (e.key === 'bpmSyncTick') {
+                if (document.hidden) return;
+                refreshData();
+            }
         });
 
         const filterDept = document.getElementById('filterDept');
@@ -2153,12 +2167,16 @@
             </div>
         </div>
         <div id="ledgerAuditBlock">
-            <label>审核状态（仅项目经理）</label>
-            <select id="ledgerEditAudit">
-                <option value="pending">待审核</option>
-                <option value="passed">已通过</option>
-                <option value="rejected">被退回</option>
-            </select>
+            <label>审核操作（仅项目经理）</label>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+                <span style="font-size:12px; color:rgba(0,0,0,0.65);">当前：</span>
+                <span id="ledgerAuditStatusText" style="font-size:12px; font-weight:600; color:#1d39c4;"></span>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-primary" id="ledgerAuditApprove" onclick="auditFromLedgerEdit('passed')">通过</button>
+                <button class="btn" id="ledgerAuditReject" style="background:#ff4d4f; color:#fff; border-color:#ff4d4f;" onclick="auditFromLedgerEdit('rejected')">退回</button>
+                <button class="btn" id="ledgerAuditRevert" style="background:#fa8c16; color:#fff; border-color:#fa8c16;" onclick="auditFromLedgerEdit('pending')">撤销</button>
+            </div>
         </div>
         <div class="modal-actions">
             <button class="btn" onclick="closeLedgerEdit()">取消</button>

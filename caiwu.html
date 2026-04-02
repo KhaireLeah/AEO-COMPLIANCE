@@ -1438,7 +1438,6 @@
             projectId: getCurrentProjectId(),
             createdAt: new Date().toISOString()
         });
-        await trySendEmailToUser(userId, title, content);
     }
 
     function renderActivityPanel(panelId, items) {
@@ -1639,6 +1638,13 @@
         });
 
         initVisibilityControls();
+
+        window.addEventListener('storage', e => {
+            if (e.key === 'bpmSyncTick') {
+                if (document.hidden) return;
+                refreshData();
+            }
+        });
 
         const userNameEl = document.querySelector('.user-name');
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
