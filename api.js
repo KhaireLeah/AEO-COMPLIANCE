@@ -88,6 +88,14 @@ async function getActivities() {
     }
 }
 
+async function getActivitiesPage(page, limit) {
+    const p = Number(page) || 1;
+    const l = Number(limit) || 200;
+    const response = await fetch(ACTIVITIES_URL + `?page=${p}&limit=${l}&sortBy=createdAt&order=desc`);
+    if (!response.ok) throw new Error('Network response was not ok.');
+    return await response.json();
+}
+
 async function addActivity(activity) {
     try {
         const payload = {...activity, createdAt: new Date().toISOString()};

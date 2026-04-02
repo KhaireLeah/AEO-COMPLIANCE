@@ -1507,6 +1507,82 @@
         }
     }
 
+    async function fetchAllActivitiesForProject(projectId, pageSize, maxPages) {
+        const pid = normalizeProjectId(projectId);
+        const limit = Number(pageSize) || 200;
+        const pages = Number(maxPages) || 30;
+        const all = [];
+        for (let page = 1; page <= pages; page++) {
+            const batch = await getActivitiesPage(page, limit);
+            if (!Array.isArray(batch) || batch.length === 0) break;
+            batch.forEach(a => {
+                if (normalizeProjectId((a || {}).projectId) === pid) all.push(a);
+            });
+            if (batch.length < limit) break;
+        }
+        return all;
+    }
+
+    async function purgeDeleteActivities() {
+        if (!IS_ADMIN) {
+            alert('权限不足：仅项目经理可执行清理。');
+            return;
+        }
+        const projectId = getCurrentProjectId();
+        const allProject = confirm('清理范围选择：\n确定=清理本项目所有人的“删除/作废”动态\n取消=仅清理我自己发布的“删除/作废”动态');
+        const ok = confirm(`即将清理【${projectId}】的删除/作废动态。\n该操作不可撤销，是否继续？`);
+        if (!ok) return;
+
+        const acts = await fetchAllActivitiesForProject(projectId, 200, 50);
+        const targets = acts.filter(a => {
+            if (!a) return false;
+            if (classifyActivity(a) !== 'delete') return false;
+            if (allProject) return true;
+            return String(a.uploader || '') === String(CURRENT_USER || '');
+        });
+
+        if (targets.length === 0) {
+            alert('未找到需要清理的删除/作废动态。');
+            return;
+        }
+
+        let done = 0;
+        const ids = targets.map(a => a.id).filter(Boolean);
+        for (let i = 0; i < ids.length; i += 6) {
+            const chunk = ids.slice(i, i + 6);
+            await Promise.all(chunk.map(id => deleteActivityAPI(id)));
+            done += chunk.length;
+        }
+        alert(`清理完成：已删除 ${done} 条删除/作废动态。`);
+        refreshData();
+    }
+
+    async function purgeAllActivities() {
+        if (!IS_ADMIN) {
+            alert('权限不足：仅项目经理可执行清理。');
+            return;
+        }
+        const projectId = getCurrentProjectId();
+        const ok = confirm(`即将清空【${projectId}】的所有动态（上传/审核/删除/其他）。\n该操作不可撤销，是否继续？`);
+        if (!ok) return;
+
+        const acts = await fetchAllActivitiesForProject(projectId, 200, 50);
+        const ids = acts.map(a => a.id).filter(Boolean);
+        if (ids.length === 0) {
+            alert('当前项目没有可清理的动态。');
+            return;
+        }
+
+        let done = 0;
+        for (let i = 0; i < ids.length; i += 6) {
+            const chunk = ids.slice(i, i + 6);
+            await Promise.all(chunk.map(id => deleteActivityAPI(id)));
+            done += chunk.length;
+        }
+        alert(`清理完成：已删除 ${done} 条动态。`);
+        refreshData();
+    }
+
     function renderActivityPanel(panelId, items) {
         const container = document.getElementById(panelId);
         if (!container) return;
@@ -1516,7 +1592,7 @@
         }
 
         container.innerHTML = '';
-        items.slice(0, 20).forEach(item => {
+        items.slice(0, 100).forEach(item => {
             const div = document.createElement('div');
             div.className = 'activity-item';
             div.style.display = 'flex';
@@ -1610,7 +1686,7 @@
     async function refreshData() {
         try {
             const projectId = getCurrentProjectId();
-            const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
+            const [docsAll, actsAll] = await Promise.all([getDocs(), getActivitiesPage(1, 1000)]);
             const docs = (docsAll || []).filter(d => {
                 return normalizeProjectId((d || {}).projectId) === projectId;
             });
@@ -1623,6 +1699,18 @@
             buildLastActivityIndex();
 
             document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
+            const pendingEl = document.getElementById('pendingCount');
+            if (pendingEl) {
+                const now = new Date();
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                const pending = docs.filter(d => {
+                    if (!d) return false;
+                    if ((d.status || 'pending') !== 'pending') return false;
+                    if (!d.createdAt) return false;
+                    return new Date(d.createdAt).getTime() >= monthStart;
+                }).length;
+                pendingEl.innerText = String(pending);
+            }
             initTypeFilter();
             renderLedger();
             renderActivityPanels();
@@ -1630,6 +1718,8 @@
         } catch (error) {
             console.error('Failed to refresh data:', error);
             document.getElementById('totalCount').innerText = '[ N/A ]';
+            const pendingEl = document.getElementById('pendingCount');
+            if (pendingEl) pendingEl.innerText = 'N/A';
             const tbody = document.getElementById('ledgerBody');
             if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
         }
@@ -1660,6 +1750,8 @@
 
         const userNameEl = document.querySelector('.user-name');
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
+        const tools = document.getElementById('activityAdminTools');
+        if (tools) tools.style.display = IS_ADMIN ? 'flex' : 'none';
 
         document.addEventListener('click', e => {
             const userAvatar = document.querySelector('.user-avatar');
@@ -1879,7 +1971,13 @@
             <div class="activities-section">
                 <div class="activities-title" style="display:flex; justify-content:space-between; align-items:center;">
                     <span>单证动态</span>
-                    <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div id="activityAdminTools" style="display:none; gap:8px; align-items:center;">
+                            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="purgeDeleteActivities()">清理删除动态</button>
+                            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="purgeAllActivities()">清空本项目动态</button>
+                        </div>
+                        <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
+                    </div>
                 </div>
                 <div class="activity-panels" id="activityPanels">
                     <details open>
