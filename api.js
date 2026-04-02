@@ -1,6 +1,7 @@
 const API_BASE_URL = 'https://69ccc9cfddc3cabb7bd18d7f.mockapi.io/api/v1';
 const DOCS_URL = `${API_BASE_URL}/documents`;
 const ACTIVITIES_URL = `${API_BASE_URL}/activities`;
+const NOTIFICATIONS_URL = `${API_BASE_URL}/notifications`;
 
 // --- Document Functions ---
 
@@ -107,5 +108,58 @@ async function deleteActivityAPI(id) {
         return await response.json();
     } catch (error) {
         console.error('Failed to delete activity:', error);
+    }
+}
+
+// --- Notification Functions ---
+
+async function getNotifications() {
+    try {
+        const response = await fetch(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc');
+        if (!response.ok) throw new Error('Failed to fetch notifications.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+        return [];
+    }
+}
+
+async function addNotification(notification) {
+    try {
+        const response = await fetch(NOTIFICATIONS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({...notification, isRead: false, createdAt: new Date().toISOString()}),
+        });
+        if (!response.ok) throw new Error('Failed to add notification.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to add notification:', error);
+    }
+}
+
+async function updateNotification(id, data) {
+    try {
+        const response = await fetch(`${NOTIFICATIONS_URL}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update notification.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to update notification:', error);
+    }
+}
+
+async function deleteNotification(id) {
+    try {
+        const response = await fetch(`${NOTIFICATIONS_URL}/${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete notification.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to delete notification:', error);
     }
 }

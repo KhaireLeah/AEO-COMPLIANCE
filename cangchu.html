@@ -28,10 +28,115 @@
 .right-menu {
     display: flex;
     align-items: center;
+    gap: 16px;
+}
+
+.notification-bell {
+    position: relative;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.notification-bell:hover {
+    background: #f0f0f0;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ff4d4f;
+    color: white;
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 10px;
+    display: none;
+    line-height: 1;
+    min-width: 12px;
+    text-align: center;
+}
+
+.inbox-panel {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 320px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    max-height: 450px;
+}
+
+.inbox-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+.inbox-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.inbox-footer {
+    padding: 8px;
+    border-top: 1px solid #f0f0f0;
+    text-align: center;
+}
+
+.notification-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-item:hover {
+    background: #fafafa;
+}
+
+.notification-item.unread {
+    background: #e6f7ff;
+}
+
+.notification-item.unread:hover {
+    background: #bae7ff;
+}
+
+.notification-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+}
+
+.notification-content {
+    font-size: 12px;
+    color: #595959;
+    word-break: break-all;
+}
+
+.notification-time {
+    font-size: 11px;
+    color: #8c8c8c;
 }
 
 .help, .datetime {
-    margin-left: 16px;
     font-size: 14px;
     color: rgba(0, 0, 0, 0.65);
 }
@@ -760,6 +865,9 @@
                 };
                 await addActivity(activity);
 
+                // 通知项目经理
+                await notifyUser('项目经理D', '收到新单据', `${CURRENT_USER} 上传了新单据: ${file.name}`, docId);
+
             } catch (error) {
                 console.error('Upload failed:', error);
                 alert('上传失败，请检查网络或联系管理员。');
@@ -851,39 +959,41 @@
     }
 
     async function deleteDoc(docId, uploader) {
-        if (IS_ADMIN || uploader === CURRENT_USER) {
-            if (confirm('确定要删除该单据吗？')) {
-                try {
-                    const docToDelete = await getDoc(docId);
+        try {
+            const docToDelete = await getDoc(docId);
+            if (!docToDelete) return;
 
-                    // 删除关联的动态
-                    const acts = await getActivities();
-                    const relatedActs = acts.filter(a => a.docId === docId);
-                    for (const act of relatedActs) {
-                        await deleteActivityAPI(act.id);
-                    }
-
-                    await deleteDocAPI(docId);
-
-                    var activity = {
-                        text: CURRENT_USER + ' 删除了单据 ' + (docToDelete ? docToDelete.name : `ID: ${docId}`),
-                        fileName: docToDelete ? docToDelete.name : '',
-                        uploader: CURRENT_USER,
-                        visibility: 'all',
-                        projectId: (docToDelete && docToDelete.projectId) ? normalizeProjectId(docToDelete.projectId) : getCurrentProjectId(),
-                        docId: docId
-                    };
-                    await addActivity(activity);
-
-                    alert('单据已删除！');
-                    refreshData();
-                } catch (error) {
-                    console.error('Error deleting doc:', error);
-                    alert('删除失败，请检查网络连接。');
-                }
+            if (docToDelete.applicant !== CURRENT_USER) {
+                alert('权限不足：仅单据发布者可以删除该单据。');
+                return;
             }
-        } else {
-            alert('抱歉，您没有权限删除此单据。');
+
+            if (confirm('确定要删除该单据吗？')) {
+                // 删除关联的动态
+                const acts = await getActivities();
+                const relatedActs = acts.filter(a => a.docId === docId);
+                for (const act of relatedActs) {
+                    await deleteActivityAPI(act.id);
+                }
+
+                await deleteDocAPI(docId);
+
+                var activity = {
+                    text: CURRENT_USER + ' 删除了单据 ' + (docToDelete.name || `ID: ${docId}`),
+                    fileName: docToDelete.name || '',
+                    uploader: CURRENT_USER,
+                    visibility: 'all',
+                    projectId: normalizeProjectId(docToDelete.projectId) || getCurrentProjectId(),
+                    docId: docId
+                };
+                await addActivity(activity);
+
+                alert('单据已删除！');
+                refreshData();
+            }
+        } catch (error) {
+            console.error('Error deleting doc:', error);
+            alert('删除失败，请检查网络连接。');
         }
     }
 
@@ -1023,6 +1133,11 @@
 
         if (IS_ADMIN) {
             updated.status = nextStatus;
+            // 如果状态发生改变，通知单据申请人
+            if (doc.status !== nextStatus) {
+                let statusCn = nextStatus === 'passed' ? '审核通过' : (nextStatus === 'rejected' ? '退回重报' : '待审核');
+                await notifyUser(doc.applicant, '单证状态更新', `您的单据 [${doc.name}] 状态已变更为: ${statusCn}`, docId);
+            }
         }
 
         await updateDoc(docId, updated);
@@ -1184,10 +1299,95 @@
     }
 
     async function deleteActivity(id) {
-        if (confirm('确定要删除这条动态记录吗？')) {
-            await deleteActivityAPI(id);
-            refreshData();
+        try {
+            const acts = await getActivities();
+            const act = acts.find(a => a.id === id);
+            if (!act) return;
+
+            if (act.uploader !== CURRENT_USER) {
+                alert('权限不足：仅动态发布者可以删除该动态。');
+                return;
+            }
+
+            if (confirm('确定要删除这条动态记录吗？')) {
+                await deleteActivityAPI(id);
+                refreshData();
+            }
+        } catch (error) {
+            console.error('Error deleting activity:', error);
         }
+    }
+
+    // --- Notification System ---
+
+    function toggleInbox() {
+        const panel = document.getElementById('inboxPanel');
+        panel.style.display = (panel.style.display === 'flex' ? 'none' : 'flex');
+        if (panel.style.display === 'flex') {
+            loadNotifications();
+        }
+    }
+
+    async function loadNotifications() {
+        try {
+            const allNotes = await getNotifications();
+            const myNotes = allNotes.filter(n => n.userId === CURRENT_USER);
+            
+            const badge = document.getElementById('notificationBadge');
+            const unreadCount = myNotes.filter(n => !n.isRead).length;
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+
+            const body = document.getElementById('inboxBody');
+            if (myNotes.length === 0) {
+                body.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无通知</div>';
+                return;
+            }
+
+            body.innerHTML = myNotes.map(n => `
+                <div class="notification-item ${n.isRead ? '' : 'unread'}" onclick="handleNoteClick('${n.id}', '${n.docId}')">
+                    <div class="notification-title">${n.title}</div>
+                    <div class="notification-content">${n.content}</div>
+                    <div class="notification-time">${new Date(n.createdAt).toLocaleString()}</div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load notifications:', error);
+        }
+    }
+
+    async function handleNoteClick(noteId, docId) {
+        await updateNotification(noteId, { isRead: true });
+        if (docId) {
+            const doc = await getDoc(docId);
+            if (doc) {
+                viewFile(doc.applicant, doc.name, doc.visibility, docId);
+            }
+        }
+        loadNotifications();
+    }
+
+    async function markAllAsRead() {
+        const allNotes = await getNotifications();
+        const myUnread = allNotes.filter(n => n.userId === CURRENT_USER && !n.isRead);
+        for (const n of myUnread) {
+            await updateNotification(n.id, { isRead: true });
+        }
+        loadNotifications();
+    }
+
+    async function notifyUser(userId, title, content, docId) {
+        await addNotification({
+            userId,
+            title,
+            content,
+            docId,
+            createdAt: new Date().toISOString()
+        });
     }
 
     function renderActivityPanel(panelId, items) {
@@ -1304,6 +1504,7 @@
             initTypeFilter();
             renderLedger();
             renderActivityPanels();
+            loadNotifications();
             
             // 更新“未处理单据”列表
             const pendingTable = document.getElementById('pendingDocsBody');
@@ -1348,7 +1549,14 @@
     }
 
     async function loadDocs() { await refreshData(); }
-    async function loadActivities() { await refreshData(); }
+    async function loadActivities() { await refreshData(); // 如果是经理，隐藏上传功能
+        if (IS_ADMIN) {
+            const uploadContainer = document.querySelector('.upload-btn-container');
+            if (uploadContainer) {
+                uploadContainer.style.display = 'none';
+            }
+        }
+    }
 
     window.onload = function() {
         setInterval(updateTime, 1000);
@@ -1386,6 +1594,22 @@
 <div class="header">
     <div class="logo">BPM System</div>
     <div class="right-menu">
+        <div class="notification-bell" onclick="toggleInbox()">
+            🔔
+            <span class="notification-badge" id="notificationBadge">0</span>
+            <div class="inbox-panel" id="inboxPanel" onclick="event.stopPropagation()">
+                <div class="inbox-header">
+                    <span>通知中心</span>
+                    <a href="#" style="font-size: 12px; color: #1890ff; text-decoration: none;" onclick="markAllAsRead()">全部已读</a>
+                </div>
+                <div class="inbox-body" id="inboxBody">
+                    <div style="padding: 20px; text-align: center; color: #999;">暂无通知</div>
+                </div>
+                <div class="inbox-footer">
+                    <a href="#" style="font-size: 12px; color: #8c8c8c; text-decoration: none;" onclick="toggleInbox()">关闭</a>
+                </div>
+            </div>
+        </div>
         <div class="help"><a href="news.html" style="text-decoration: none; color: inherit;">② 帮助</a></div>
         <div id="liveClock" class="datetime"></div>
     </div>
