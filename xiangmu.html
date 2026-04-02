@@ -693,9 +693,10 @@
     let reuploadDocId = null;
 
     function normalizeProjectId(pid) {
-        if (!pid) return DEFAULT_PROJECT_ID;
-        if (pid === 'HCVAC' || pid === 'NAURA') return DEFAULT_PROJECT_ID;
-        return pid;
+        const raw = (pid == null) ? '' : String(pid).trim();
+        if (!raw) return DEFAULT_PROJECT_ID;
+        if (raw === 'HCVAC' || raw === 'NAURA') return DEFAULT_PROJECT_ID;
+        return raw;
     }
 
     function getCurrentProjectId() {
@@ -1600,23 +1601,11 @@
                 return normalizeProjectId(String(a.projectId).trim()) === projectId;
             });
 
-            let finalDocs = docs;
-            let finalActs = acts;
-            let usingAll = false;
-            if (finalDocs.length === 0 && (docsAll || []).length > 0) {
-                finalDocs = docsAll || [];
-                usingAll = true;
-            }
-            if (finalActs.length === 0 && (actsAll || []).length > 0) {
-                finalActs = actsAll || [];
-                usingAll = true;
-            }
-
-            STATE.docs = finalDocs;
-            STATE.activities = finalActs;
+            STATE.docs = docs;
+            STATE.activities = acts;
             buildLastActivityIndex();
 
-            document.getElementById('totalCount').innerText = usingAll ? `[ ${finalDocs.length} · 全部项目 ]` : `[ ${finalDocs.length} ]`;
+            document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
             initTypeFilter();
             renderLedger();
             renderActivityPanels();

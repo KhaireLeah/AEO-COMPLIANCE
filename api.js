@@ -31,10 +31,12 @@ async function getDoc(id) {
 
 async function addDoc(doc) {
     try {
+        const payload = {...doc, createdAt: new Date().toISOString()};
+        if (typeof payload.projectId === 'string') payload.projectId = payload.projectId.trim();
         const response = await fetch(DOCS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({...doc, createdAt: new Date().toISOString()}),
+            body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to add doc.');
         return await response.json();
@@ -88,10 +90,12 @@ async function getActivities() {
 
 async function addActivity(activity) {
     try {
+        const payload = {...activity, createdAt: new Date().toISOString()};
+        if (typeof payload.projectId === 'string') payload.projectId = payload.projectId.trim();
         const response = await fetch(ACTIVITIES_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({...activity, createdAt: new Date().toISOString()}),
+            body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to add activity.');
         return await response.json();

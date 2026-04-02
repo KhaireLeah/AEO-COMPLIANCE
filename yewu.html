@@ -656,9 +656,10 @@
     const DEFAULT_PROJECT_ID = '项目01';
 
     function normalizeProjectId(pid) {
-        if (!pid) return DEFAULT_PROJECT_ID;
-        if (pid === 'HCVAC' || pid === 'NAURA') return DEFAULT_PROJECT_ID;
-        return pid;
+        const raw = (pid == null) ? '' : String(pid).trim();
+        if (!raw) return DEFAULT_PROJECT_ID;
+        if (raw === 'HCVAC' || raw === 'NAURA') return DEFAULT_PROJECT_ID;
+        return raw;
     }
 
     function getCurrentProjectId() {
@@ -1563,8 +1564,8 @@
         try {
             const projectId = getCurrentProjectId();
             const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
-            const docs = (docsAll || []).filter(d => normalizeProjectId(d.projectId) === projectId);
-            const acts = (actsAll || []).filter(a => normalizeProjectId(a.projectId) === projectId);
+            const docs = (docsAll || []).filter(d => normalizeProjectId((d || {}).projectId) === projectId);
+            const acts = (actsAll || []).filter(a => normalizeProjectId((a || {}).projectId) === projectId);
 
             STATE.docs = docs;
             STATE.activities = acts;
