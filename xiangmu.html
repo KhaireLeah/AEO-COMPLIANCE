@@ -533,6 +533,46 @@
     margin-right: 8px;
 }
 
+.upload-btn-container {
+    margin-top: 15px;
+}
+.upload-options {
+    background: #f8fbff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #adc6ff;
+}
+.option-group {
+    margin-bottom: 10px;
+}
+.option-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 13px;
+}
+.option-group select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.btn-upload {
+    padding: 10px 20px;
+    background: #fff;
+    color: #1890ff;
+    border: 1px solid #1890ff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    display: inline-block;
+    text-align: center;
+}
+.btn-upload:hover {
+    background: #e6f7ff;
+}
+
 .memo-container {
     margin: 40px 20px 20px 20px;
     padding: 15px;
@@ -637,7 +677,10 @@
 
     const CURRENT_USER = "项目经理D";
     const IS_ADMIN = true;
+    const REQUIRED_DEPT = '项目管理';
     const DEFAULT_PROJECT_ID = '项目01';
+
+    let reuploadDocId = null;
 
     function normalizeProjectId(pid) {
         if (!pid) return DEFAULT_PROJECT_ID;
@@ -1029,6 +1072,208 @@
         document.getElementById('historyBody').innerHTML = '';
     }
 
+    // --- Upload Functions ---
+    function getVisCheckbox(val) {
+        return Array.from(document.querySelectorAll('.vis-check')).find(cb => cb.value === val);
+    }
+
+    function setVisibilityFromArray(values) {
+        const set = new Set((values || []).map(v => String(v)));
+        document.querySelectorAll('.vis-check').forEach(cb => {
+            cb.checked = set.has(cb.value);
+        });
+    }
+
+    function parseVisibilityInput(input) {
+        if (!input) return [];
+        if (Array.isArray(input)) return input.map(x => String(x));
+        try {
+            const parsed = JSON.parse(input);
+            if (Array.isArray(parsed)) return parsed.map(x => String(x));
+        } catch(e) {}
+        return String(input).split(/[,，]/).map(s => s.trim()).filter(Boolean);
+    }
+
+    function ensureDefaultVisibility() {
+        const allCb = getVisCheckbox('all');
+        if (allCb && allCb.checked) return;
+        const deptCb = getVisCheckbox(REQUIRED_DEPT);
+        if (deptCb) deptCb.checked = true;
+    }
+
+    function applyVisibilityUI() {
+        const allCb = getVisCheckbox('all');
+        const otherCbs = Array.from(document.querySelectorAll('.vis-check')).filter(cb => cb.value !== 'all');
+
+        if (allCb && allCb.checked) {
+            otherCbs.forEach(cb => {
+                cb.checked = false;
+                cb.disabled = true;
+                if (cb.parentElement) cb.parentElement.style.display = 'none';
+            });
+        } else {
+            otherCbs.forEach(cb => {
+                cb.disabled = false;
+                if (cb.parentElement) cb.parentElement.style.display = '';
+            });
+        }
+    }
+
+    function onVisibilityChange(e) {
+        const target = e && e.target;
+        if (!target) return;
+        if (target.value === 'all') {
+            applyVisibilityUI();
+            if (!target.checked) {
+                ensureDefaultVisibility();
+                applyVisibilityUI();
+            }
+            return;
+        }
+
+        const allCb = getVisCheckbox('all');
+        if (allCb && allCb.checked) {
+            allCb.checked = false;
+        }
+        applyVisibilityUI();
+        const anyChecked = Array.from(document.querySelectorAll('.vis-check')).some(cb => cb.checked);
+        if (!anyChecked) {
+            ensureDefaultVisibility();
+            applyVisibilityUI();
+        }
+    }
+
+    function initVisibilityControls() {
+        const cbs = document.querySelectorAll('.vis-check');
+        cbs.forEach(cb => cb.addEventListener('change', onVisibilityChange));
+        ensureDefaultVisibility();
+        applyVisibilityUI();
+    }
+
+    async function handleUpload() {
+        var fileInput = document.getElementById('fileUpload');
+        if (fileInput.files.length === 0) return;
+
+        var optionsPanel = document.getElementById('uploadOptions');
+        if(optionsPanel) optionsPanel.style.display = 'block';
+
+        if (reuploadDocId) {
+            try {
+                const docs = await getDocs();
+                var doc = docs.find(d => d.id === reuploadDocId);
+                if (doc) {
+                    document.getElementById('docType').value = doc.type;
+                    setVisibilityFromArray(parseVisibilityInput(doc.visibility));
+                    applyVisibilityUI();
+                }
+            } catch (error) {
+                console.error('Error fetching doc for re-upload:', error);
+                alert('获取旧单据信息失败，请检查网络连接。');
+            }
+        } else {
+            ensureDefaultVisibility();
+            applyVisibilityUI();
+        }
+    }
+
+    async function confirmUpload() {
+        var fileInput = document.getElementById('fileUpload');
+        var file = fileInput.files[0];
+        if (!file) {
+            alert('请先选择文件！');
+            return;
+        }
+
+        var docType = document.getElementById('docType').value;
+        var selectedVis = [];
+        document.querySelectorAll('.vis-check:checked').forEach(cb => {
+            selectedVis.push(cb.value);
+        });
+
+        if (selectedVis.length === 0) {
+            alert('请至少选择一个可见部门！');
+            return;
+        }
+
+        const uploadButton = document.querySelector('.btn-upload[onclick="confirmUpload()"]');
+        uploadButton.disabled = true;
+        uploadButton.textContent = '正在上传...';
+
+        var reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                var fileData = e.target.result;
+                const projectId = getCurrentProjectId();
+
+                const activityText = CURRENT_USER + (reuploadDocId ? ' 重新存入了单据 ' : ' 存入了单据 ') + file.name;
+                let docId = reuploadDocId;
+
+                if (reuploadDocId) {
+                    const docs = await getDocs();
+                    const oldDoc = docs.find(d => d.id === reuploadDocId);
+                    if (oldDoc) {
+                        const updatedDoc = {
+                            ...oldDoc,
+                            projectId: normalizeProjectId(oldDoc.projectId) || projectId,
+                            name: file.name,
+                            type: docType,
+                            fileExt: file.name.split('.').pop().toUpperCase(),
+                            fileData: fileData,
+                            status: 'pending',
+                            visibility: selectedVis
+                        };
+                        await updateDoc(reuploadDocId, updatedDoc);
+                        alert('单据已重新存入！');
+                    }
+                    reuploadDocId = null;
+                } else {
+                    var newDoc = {
+                        projectId: projectId,
+                        name: file.name,
+                        type: docType,
+                        fileExt: file.name.split('.').pop().toUpperCase(),
+                        fileData: fileData,
+                        dept: REQUIRED_DEPT,
+                        action: '录入',
+                        applicant: CURRENT_USER,
+                        status: 'pending',
+                        visibility: selectedVis
+                    };
+                    const createdDoc = await addDoc(newDoc);
+                    docId = createdDoc.id;
+                    alert('文件上传成功！');
+                }
+
+                var activity = {
+                    text: activityText,
+                    fileName: file.name,
+                    uploader: CURRENT_USER,
+                    visibility: selectedVis,
+                    docId: docId,
+                    projectId: projectId
+                };
+                await addActivity(activity);
+
+            } catch (error) {
+                console.error('Upload failed:', error);
+                alert('上传失败，请检查网络或联系管理员。');
+            } finally {
+                uploadButton.disabled = false;
+                uploadButton.textContent = '确认上传';
+                document.getElementById('uploadOptions').style.display = 'none';
+                fileInput.value = '';
+                refreshData();
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function triggerReupload(docId) {
+        reuploadDocId = docId;
+        document.getElementById('fileUpload').click();
+    }
+    // --- End Upload Functions ---
+
     function toggleStep(el) {
         el.classList.toggle('completed');
     }
@@ -1322,7 +1567,7 @@
         // Set a poller to refresh data periodically
         setInterval(() => {
             refreshData();
-        }, 15000); // Refresh more frequently for admin
+        }, 5000); // Changed from 15s to 5s for better real-time feel
     }
 </script>
 </head>
@@ -1433,6 +1678,38 @@
                             <div class="step-desc">完成所有报关及财务结算，资料统一归档。</div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="doc-section">
+                <div class="dept-header">项目管理文档上传</div>
+                <div class="ledger-hint">项目经理可以在此上传项目指导书、总结报告等管理类文档。</div>
+                <div class="upload-btn-container">
+                    <div id="uploadOptions" class="upload-options" style="display: none;">
+                        <div class="option-group">
+                            <label>选择单据类型</label>
+                            <select id="docType">
+                                <option value="项目指导书">项目指导书</option>
+                                <option value="项目总结">项目总结</option>
+                                <option value="会议纪要">会议纪要</option>
+                                <option value="进度报告">进度报告</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>设置可见权限 (多选)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666;">
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="all"> 所有人可见</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="项目管理" checked> 项目管理</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="业务部"> 业务部</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="仓储部"> 仓储部</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="财务部"> 财务部</label>
+                            </div>
+                        </div>
+                        <button class="btn-upload" onclick="confirmUpload()" style="width: 100%; margin-top: 15px;">确认上传</button>
+                    </div>
+                    <input type="file" id="fileUpload" style="display: none;" onchange="handleUpload()">
+                    <button class="btn-upload" onclick="document.getElementById('fileUpload').click()">+ 上传管理文档</button>
                 </div>
             </div>
 
