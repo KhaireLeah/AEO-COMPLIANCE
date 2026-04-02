@@ -1183,8 +1183,9 @@
         try {
             const parsed = JSON.parse(input);
             if (Array.isArray(parsed)) return parsed.map(x => String(x));
+            if (typeof parsed === 'string') return [String(parsed)];
         } catch(e) {}
-        return String(input).split(/[,，]/).map(s => s.trim()).filter(Boolean);
+        return String(input).split(/[,，]/).map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
     }
 
     function ensureDefaultVisibility() {
@@ -1509,10 +1510,6 @@
             const doc = await getDoc(docId);
             if (!doc) return;
             const projectId = getCurrentProjectId();
-            if (normalizeProjectId(doc.projectId) !== projectId) {
-                alert('仅允许审核当前项目组的单据。');
-                return;
-            }
 
             const next = String(status || 'pending');
             const prev = String(doc.status || 'pending');
@@ -1791,7 +1788,7 @@
     async function refreshData() {
         try {
             const projectId = getCurrentProjectId();
-            const [docsAll, actsAll] = await Promise.all([getDocs(), getActivitiesPage(1, 1000)]);
+            const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
             const docs = (docsAll || []);
             const acts = (actsAll || []);
             const visibleActs = (acts || []).filter(a => {
@@ -1806,6 +1803,7 @@
             STATE.activities = visibleActs;
             buildLastActivityIndex();
 
+            setInlineNotice('');
             document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) {
@@ -1831,6 +1829,7 @@
             initTypeFilter();
             renderLedger();
             renderActivityPanels();
+            setInlineNotice('数据加载失败：请检查网络连接或 MockAPI 是否可用。');
             document.getElementById('totalCount').innerText = '[ N/A ]';
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) pendingEl.innerText = 'N/A';

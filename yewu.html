@@ -702,13 +702,15 @@
         if (typeof visibility === 'string') {
             try {
                 const parsed = JSON.parse(visibility);
-                return Array.isArray(parsed) ? parsed : [visibility];
+                if (Array.isArray(parsed)) return parsed;
+                if (typeof parsed === 'string') return [parsed];
+                return [String(visibility).replace(/^['"]|['"]$/g, '')];
             } catch (e) {
-                return [visibility];
+                return [String(visibility).replace(/^['"]|['"]$/g, '')];
             }
         }
         if (visibility == null) return [];
-        return [String(visibility)];
+        return [String(visibility).replace(/^['"]|['"]$/g, '')];
     }
 
     function getVisCheckbox(value) {
