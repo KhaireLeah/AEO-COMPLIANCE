@@ -3,6 +3,10 @@ const DOCS_URL = `${API_BASE_URL}/documents`;
 const ACTIVITIES_URL = `${API_BASE_URL}/activities`;
 const NOTIFICATIONS_URL = `${API_BASE_URL}/notifications`;
 
+if (typeof window !== 'undefined' && window && typeof window.alert === 'function') {
+    window.alert = function() {};
+}
+
 // --- Document Functions ---
 
 async function getDocs() {
