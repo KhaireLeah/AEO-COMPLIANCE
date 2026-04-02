@@ -304,6 +304,9 @@
             }
             sessionStorage.setItem('authorizedDept', dept);
             localStorage.setItem('bpmAuthorizedDept', dept);
+            const role = (dept === '项目管理') ? 'pm' : 'member';
+            sessionStorage.setItem('userRole', role);
+            localStorage.setItem('bpmRole', role);
             window.location.href = url;
         }
 

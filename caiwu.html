@@ -651,7 +651,8 @@
 
     const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "财务员A";
     if (CURRENT_USER) sessionStorage.setItem('currentUserName', CURRENT_USER);
-    const IS_ADMIN = (authorizedDept === '项目管理');
+    const USER_ROLE = sessionStorage.getItem('userRole') || localStorage.getItem('bpmRole') || 'member';
+    const IS_ADMIN = (USER_ROLE === 'pm');
     const PM_USER = getPmUserName();
     const DEFAULT_PROJECT_ID = '项目01';
 
@@ -887,7 +888,9 @@
                 await addActivity(activity);
 
                 // 通知项目经理
-                await notifyUser(PM_USER, '收到新单据', `${CURRENT_USER} 上传了新单据: ${file.name}`, docId);
+                if (PM_USER && PM_USER !== CURRENT_USER) {
+                    await notifyUser(PM_USER, '收到新单据', `${CURRENT_USER} 上传了新单据: ${file.name}`, docId);
+                }
 
             } catch (error) {
                 console.error('Upload failed:', error);
@@ -1084,7 +1087,6 @@
         const noteEl = document.getElementById('ledgerEditNote');
         const tagsEl = document.getElementById('ledgerEditTags');
         const auditBlock = document.getElementById('ledgerAuditBlock');
-        const auditEl = document.getElementById('ledgerEditAudit');
 
         idEl.value = docId;
         const categories = Array.from(new Set(STATE.docs.map(d => getTypeCategory(d.type)))).sort();
@@ -1104,12 +1106,7 @@
         bindEditVisibility();
         applyEditVisibilityUI();
 
-        if (IS_ADMIN) {
-            auditBlock.style.display = '';
-            auditEl.value = doc.status || 'pending';
-        } else {
-            auditBlock.style.display = 'none';
-        }
+        if (auditBlock) auditBlock.style.display = 'none';
 
         mask.style.display = 'flex';
         setTimeout(() => noteEl.focus(), 0);
@@ -1131,7 +1128,6 @@
         const catEl = document.getElementById('ledgerEditCategory');
         const noteEl = document.getElementById('ledgerEditNote');
         const tagsEl = document.getElementById('ledgerEditTags');
-        const auditEl = document.getElementById('ledgerEditAudit');
 
         const nextCategory = catEl.value || getTypeCategory(doc.type);
         const nextNote = noteEl.value || '';
@@ -1162,15 +1158,6 @@
         if (JSON.stringify(prev.ledgerTags) !== JSON.stringify(nextTags)) changes.ledgerTags = { from: prev.ledgerTags, to: nextTags };
         if (allowVisEdit && JSON.stringify(prev.visibility) !== JSON.stringify(nextVisibility)) changes.visibility = { from: prev.visibility, to: nextVisibility };
 
-        let nextStatus = doc.status || 'pending';
-        if (IS_ADMIN) {
-            const desired = auditEl.value || 'pending';
-            if (desired !== nextStatus) {
-                changes.status = { from: nextStatus, to: desired };
-                nextStatus = desired;
-            }
-        }
-
         if (Object.keys(changes).length === 0) {
             closeLedgerEdit();
             return;
@@ -1194,24 +1181,18 @@
         };
         if (allowVisEdit) updated.visibility = nextVisibility;
 
-        if (IS_ADMIN) {
-            updated.status = nextStatus;
-            // 如果状态发生改变，通知单据申请人
-            if (doc.status !== nextStatus) {
-                let statusCn = nextStatus === 'passed' ? '审核通过' : (nextStatus === 'rejected' ? '退回重报' : '待审核');
-                await notifyUser(doc.applicant, '单证状态更新', `您的单据 [${doc.name}] 状态已变更为: ${statusCn}`, docId);
-            }
-        }
-
         await updateDoc(docId, updated);
         await addActivity({
             text: `${CURRENT_USER} 更新了台账 ${doc.name || ''}`,
             fileName: doc.name || '',
             uploader: CURRENT_USER,
-            visibility: 'all',
+            visibility: (updated.visibility != null ? updated.visibility : (doc.visibility != null ? doc.visibility : 'all')),
             docId: docId,
             projectId: projectId
         });
+        if (PM_USER && PM_USER !== CURRENT_USER) {
+            await notifyUser(PM_USER, '台账有更新', `${CURRENT_USER} 更新了台账：${doc.name || docId}`, docId);
+        }
 
         closeLedgerEdit();
         refreshData();
@@ -1449,6 +1430,7 @@
             title,
             content,
             docId,
+            projectId: getCurrentProjectId(),
             createdAt: new Date().toISOString()
         });
         await trySendEmailToUser(userId, title, content);

@@ -749,9 +749,12 @@
                     sessionStorage.setItem('currentUserName', userName);
                     sessionStorage.setItem('currentUserEmail', (profile && profile.email) ? profile.email : '');
                     sessionStorage.setItem('authorizedDept', tab.dept);
+                    const role = (tab.key === 'pm') ? 'pm' : 'member';
+                    sessionStorage.setItem('userRole', role);
                     localStorage.setItem('bpmCurrentUserName', userName);
                     localStorage.setItem('bpmAuthorizedDept', tab.dept);
                     localStorage.setItem('bpmCurrentProjectId', currentProjectId);
+                    localStorage.setItem('bpmRole', role);
                     window.location.href = tab.url;
                 };
             } else {

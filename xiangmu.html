@@ -679,14 +679,15 @@
     // 权限校验
     const authorizedDept = sessionStorage.getItem('authorizedDept') || localStorage.getItem('bpmAuthorizedDept');
     if (authorizedDept) sessionStorage.setItem('authorizedDept', authorizedDept);
-    if (authorizedDept !== '项目管理') {
+    const USER_ROLE = sessionStorage.getItem('userRole') || localStorage.getItem('bpmRole') || 'member';
+    if (authorizedDept !== '项目管理' && USER_ROLE !== 'pm') {
         alert('权限不足：只有项目经理可以访问此页面。');
         window.location.href = 'login.html';
     }
 
     const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "项目经理D";
     if (CURRENT_USER) sessionStorage.setItem('currentUserName', CURRENT_USER);
-    const IS_ADMIN = (authorizedDept === '项目管理');
+    const IS_ADMIN = (USER_ROLE === 'pm' || authorizedDept === '项目管理');
     const REQUIRED_DEPT = '项目管理';
     const DEFAULT_PROJECT_ID = '项目01';
 
@@ -937,12 +938,7 @@
         bindEditVisibility();
         applyEditVisibilityUI();
 
-        if (IS_ADMIN) {
-            auditBlock.style.display = '';
-            auditEl.value = doc.status || 'pending';
-        } else {
-            auditBlock.style.display = 'none';
-        }
+        if (auditBlock) auditBlock.style.display = 'none';
 
         mask.style.display = 'flex';
         setTimeout(() => noteEl.focus(), 0);
@@ -1023,6 +1019,7 @@
             title,
             content,
             docId,
+            projectId: getCurrentProjectId(),
             createdAt: new Date().toISOString()
         });
         await trySendEmailToUser(userId, title, content);
@@ -1045,7 +1042,6 @@
         const catEl = document.getElementById('ledgerEditCategory');
         const noteEl = document.getElementById('ledgerEditNote');
         const tagsEl = document.getElementById('ledgerEditTags');
-        const auditEl = document.getElementById('ledgerEditAudit');
 
         const nextCategory = catEl.value || getTypeCategory(doc.type);
         const nextNote = noteEl.value || '';
@@ -1074,15 +1070,6 @@
             if (JSON.stringify(prev.visibility) !== JSON.stringify(nextVisibility)) changes.visibility = { from: prev.visibility, to: nextVisibility };
         }
 
-        let nextStatus = doc.status || 'pending';
-        if (IS_ADMIN) {
-            const desired = auditEl.value || 'pending';
-            if (desired !== nextStatus) {
-                changes.status = { from: nextStatus, to: desired };
-                nextStatus = desired;
-            }
-        }
-
         if (Object.keys(changes).length === 0) {
             closeLedgerEdit();
             return;
@@ -1105,15 +1092,6 @@
             ledgerHistory: history
         };
         if (allowVisEdit) updated.visibility = nextVisibility;
-
-        if (IS_ADMIN) {
-            updated.status = nextStatus;
-            // 如果状态发生改变，通知单据申请人
-            if (doc.status !== nextStatus) {
-                let statusCn = nextStatus === 'passed' ? '审核通过' : (nextStatus === 'rejected' ? '退回重报' : '待审核');
-                await notifyUser(doc.applicant, '单据状态更新', `您的单据 [${doc.name}] 状态已变更为: ${statusCn}`, docId);
-            }
-        }
 
         await updateDoc(docId, updated);
         await addActivity({
@@ -1460,6 +1438,20 @@
             const historyCount = getLedgerHistory(doc).length;
             const historyBadge = historyCount > 0 ? `<span class="history-badge" onclick="openHistory('${doc.id}')">${historyCount}</span>` : '';
 
+            const viewLink = `<a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>`;
+            const editLink = `<a href="#" class="action-link" onclick="openLedgerEdit('${doc.id}')">编辑</a>`;
+            const delLink = `<a href="#" class="action-link" style="color:#ff4d4f;" onclick="deleteDoc('${doc.id}')">删除</a>`;
+
+            let auditLinks = '';
+            if (IS_ADMIN) {
+                if ((doc.status || 'pending') === 'pending') {
+                    auditLinks = ` | <a href="#" class="action-link" style="color:#52c41a;" onclick="setAuditStatus('${doc.id}', 'passed')">通过</a>
+                    | <a href="#" class="action-link" style="color:#ff4d4f;" onclick="setAuditStatus('${doc.id}', 'rejected')">退回</a>`;
+                } else {
+                    auditLinks = ` | <a href="#" class="action-link" style="color:#fa8c16;" onclick="setAuditStatus('${doc.id}', 'pending')">撤销</a>`;
+                }
+            }
+
             tr.innerHTML = `
                 <td>${formatProjectId(doc.projectId)}</td>
                 <td>${category} / ${doc.type || '-'} ${historyBadge}</td>
@@ -1469,10 +1461,10 @@
                 <td>${doc.applicant || '-'}</td>
                 <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'}</td>
                 <td>
-                    <a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
-                    |
-                    <a href="#" class="action-link" onclick="openLedgerEdit('${doc.id}')">编辑</a>
-                    | <a href="#" class="action-link" style="color:#ff4d4f;" onclick="deleteDoc('${doc.id}')">删除</a>
+                    ${viewLink}
+                    | ${editLink}
+                    ${auditLinks}
+                    | ${delLink}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -1485,6 +1477,48 @@
         if (text.includes('通过') || text.includes('退回') || text.includes('审核')) return 'audit';
         if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入') || text.includes('存入')) return 'upload';
         return 'other';
+    }
+
+    async function setAuditStatus(docId, status) {
+        if (!IS_ADMIN) {
+            alert('权限不足：仅项目经理可审核。');
+            return;
+        }
+        try {
+            const doc = await getDoc(docId);
+            if (!doc) return;
+            const projectId = getCurrentProjectId();
+            if (normalizeProjectId(doc.projectId) !== projectId) {
+                alert('仅允许审核当前项目组的单据。');
+                return;
+            }
+
+            const next = String(status || 'pending');
+            const prev = String(doc.status || 'pending');
+            if (prev === next) return;
+
+            const updated = { ...doc, status: next };
+            await updateDoc(docId, updated);
+
+            const statusCn = next === 'passed' ? '审核通过' : (next === 'rejected' ? '退回重报' : '撤销审核');
+            await addActivity({
+                text: `${CURRENT_USER} ${statusCn} ${doc.name || ''}`,
+                fileName: doc.name || '',
+                uploader: CURRENT_USER,
+                visibility: (doc.visibility != null ? doc.visibility : 'all'),
+                docId: docId,
+                projectId: projectId
+            });
+
+            if (doc.applicant) {
+                await notifyUser(doc.applicant, '单据审核结果', `您的单据 [${doc.name || docId}] 状态已变更为：${statusCn}`, docId);
+            }
+
+            refreshData();
+        } catch (error) {
+            console.error('Failed to set audit status:', error);
+            alert('审核操作失败，请检查网络连接。');
+        }
     }
 
     async function deleteActivity(id) {

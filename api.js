@@ -129,7 +129,7 @@ async function deleteActivityAPI(id) {
 
 async function getNotifications() {
     try {
-        const response = await fetch(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc&limit=200');
+        const response = await fetch(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc&limit=500');
         if (!response.ok) throw new Error('Failed to fetch notifications.');
         return await response.json();
     } catch (error) {
@@ -140,10 +140,14 @@ async function getNotifications() {
 
 async function addNotification(notification) {
     try {
+        const payload = {...notification};
+        if (payload && payload.createdAt == null) payload.createdAt = new Date().toISOString();
+        if (payload && payload.isRead == null) payload.isRead = false;
+        if (typeof payload.projectId === 'string') payload.projectId = payload.projectId.trim();
         const response = await fetch(NOTIFICATIONS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({...notification, isRead: false, createdAt: new Date().toISOString()}),
+            body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to add notification.');
         return await response.json();
