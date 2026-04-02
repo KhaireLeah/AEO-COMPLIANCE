@@ -696,7 +696,6 @@
     function normalizeProjectId(pid) {
         const raw = (pid == null) ? '' : String(pid).trim();
         if (!raw) return DEFAULT_PROJECT_ID;
-        if (raw === 'HCVAC' || raw === 'NAURA') return DEFAULT_PROJECT_ID;
         return raw;
     }
 
@@ -1758,6 +1757,12 @@
             loadNotifications();
         } catch (error) {
             console.error('Failed to refresh data:', error);
+            STATE.docs = [];
+            STATE.activities = [];
+            buildLastActivityIndex();
+            initTypeFilter();
+            renderLedger();
+            renderActivityPanels();
             document.getElementById('totalCount').innerText = '[ N/A ]';
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) pendingEl.innerText = 'N/A';

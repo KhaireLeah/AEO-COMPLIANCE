@@ -659,7 +659,6 @@
     function normalizeProjectId(pid) {
         const raw = (pid == null) ? '' : String(pid).trim();
         if (!raw) return DEFAULT_PROJECT_ID;
-        if (raw === 'HCVAC' || raw === 'NAURA') return DEFAULT_PROJECT_ID;
         return raw;
     }
 
@@ -1602,6 +1601,16 @@
 
         } catch (error) {
             console.error('Failed to refresh data:', error);
+            STATE.docs = [];
+            STATE.activities = [];
+            buildLastActivityIndex();
+            initTypeFilter();
+            renderLedger();
+            renderActivityPanels();
+            const pendingTable = document.getElementById('pendingDocsBody');
+            if (pendingTable) pendingTable.innerHTML = '';
+            const pendingCountEl = document.getElementById('pendingCount');
+            if (pendingCountEl) pendingCountEl.innerText = '[ 0 ]';
             const tbody = document.getElementById('ledgerBody');
             if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
         }

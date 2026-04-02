@@ -610,9 +610,9 @@
         ];
 
         function normalizeProjectId(pid) {
-            if (!pid) return PROJECTS[0].id;
-            if (pid === 'HCVAC' || pid === 'NAURA') return PROJECTS[0].id;
-            return pid;
+            const raw = (pid == null) ? '' : String(pid).trim();
+            if (!raw) return PROJECTS[0].id;
+            return raw;
         }
 
         let currentProjectId = normalizeProjectId(sessionStorage.getItem('currentProjectId')) || PROJECTS[0].id;
