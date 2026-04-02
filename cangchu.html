@@ -640,7 +640,8 @@
 <script type="text/javascript">
     // 权限校验：必须通过 login.html 授权后才能进入
     const REQUIRED_DEPT = "仓储部";
-    const authorizedDept = sessionStorage.getItem('authorizedDept');
+    const authorizedDept = sessionStorage.getItem('authorizedDept') || localStorage.getItem('bpmAuthorizedDept');
+    if (authorizedDept) sessionStorage.setItem('authorizedDept', authorizedDept);
     
     // 如果没有授权，或者授权的部门不是当前部门（且不是项目管理），则拦截
     if (!authorizedDept || (authorizedDept !== REQUIRED_DEPT && authorizedDept !== '项目管理')) {
@@ -648,8 +649,10 @@
         window.location.href = 'index.html'; 
     }
 
-    const CURRENT_USER = "仓储管理员B";
+    const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "仓储员A";
+    if (CURRENT_USER) sessionStorage.setItem('currentUserName', CURRENT_USER);
     const IS_ADMIN = (authorizedDept === '项目管理');
+    const PM_USER = getPmUserName();
     const DEFAULT_PROJECT_ID = '项目01';
 
     function normalizeProjectId(pid) {
@@ -659,7 +662,10 @@
     }
 
     function getCurrentProjectId() {
-        return normalizeProjectId(sessionStorage.getItem('currentProjectId'));
+        const pid = sessionStorage.getItem('currentProjectId') || localStorage.getItem('bpmCurrentProjectId');
+        const norm = normalizeProjectId(pid);
+        if (norm) sessionStorage.setItem('currentProjectId', norm);
+        return norm;
     }
 
     function updateTime() {
@@ -803,6 +809,12 @@
             return;
         }
 
+        const maxBytes = 900 * 1024;
+        if (file.size > maxBytes) {
+            alert(`文件过大（${Math.ceil(file.size / 1024)}KB）。当前系统会把文件以 Base64 写入在线接口，建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB 的文件（PDF/图片/文本）。`);
+            return;
+        }
+
         var docType = document.getElementById('docType').value;
         var selectedVis = [];
         document.querySelectorAll('.vis-check:checked').forEach(cb => {
@@ -874,7 +886,7 @@
                 await addActivity(activity);
 
                 // 通知项目经理
-                await notifyUser('项目经理D', '收到新单据', `${CURRENT_USER} 上传了新单据: ${file.name}`, docId);
+                await notifyUser(PM_USER, '收到新单据', `${CURRENT_USER} 上传了新单据: ${file.name}`, docId);
 
             } catch (error) {
                 console.error('Upload failed:', error);
@@ -1344,7 +1356,7 @@
         const text = String((item && item.text) || '');
         if (text.includes('删除') || text.includes('作废')) return 'delete';
         if (text.includes('通过') || text.includes('退回') || text.includes('审核')) return 'audit';
-        if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入')) return 'upload';
+        if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入') || text.includes('存入')) return 'upload';
         return 'other';
     }
 
@@ -1438,6 +1450,7 @@
             docId,
             createdAt: new Date().toISOString()
         });
+        await trySendEmailToUser(userId, title, content);
     }
 
     function renderActivityPanel(panelId, items) {
@@ -1622,6 +1635,9 @@
 
         initVisibilityControls();
 
+        const userNameEl = document.querySelector('.user-name');
+        if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
+
         loadDocs();
         loadActivities();
         loadNotifications();
@@ -1662,6 +1678,7 @@
                 </div>
             </div>
         </div>
+        <div class="help"><a href="profile.html" style="text-decoration: none; color: inherit;">账号设置</a></div>
         <div class="help"><a href="news.html" style="text-decoration: none; color: inherit;">② 帮助</a></div>
         <div id="liveClock" class="datetime"></div>
     </div>
@@ -1727,6 +1744,7 @@
                         <option value="业务部">单证部</option>
                         <option value="仓储部">物流部</option>
                         <option value="财务部">商务部</option>
+                        <option value="项目管理">项目管理</option>
                     </select>
                     <select id="filterAudit" onchange="renderLedger()">
                         <option value="all">全部审核状态</option>

@@ -420,7 +420,9 @@
         <div class="logo">BPM System</div>
         <div class="header-right">
             <a href="index.html" class="help-link" style="color: #ff4d4f; font-weight: 600;" onclick="sessionStorage.clear()">退出登录</a>
+            <a href="#" class="help-link" onclick="openProfile(); return false;">账号设置</a>
             <a href="news.html" class="help-link">帮助中心</a>
+            <div id="currentUserTag" style="color: var(--text-sub);"></div>
             <div id="liveClock" style="color: var(--text-sub); font-family: monospace;"></div>
         </div>
     </header>
@@ -470,6 +472,33 @@
         </div>
     </div>
 
+    <div class="modal-mask" id="profileMask">
+        <div class="modal" role="dialog" aria-modal="true">
+            <h3>账号设置</h3>
+            <p style="margin-top:6px;">用于显示“当前用户”、站内通知投递对象，以及（可选）邮件发送。</p>
+            <label>用户名</label>
+            <input id="profileName" placeholder="例如：项目经理D / 单证员A">
+            <label>邮箱</label>
+            <input id="profileEmail" placeholder="例如：name@example.com">
+            <div style="margin-top:10px; padding:10px; background:#f6ffed; border:1px solid #b7eb8f; border-radius:10px;">
+                <div style="font-weight:600; margin-bottom:6px;">可选：EmailJS 发信配置</div>
+                <div style="font-size:12px; color:rgba(0,0,0,0.65); line-height:1.6;">
+                    未配置时系统只会生成站内通知；配置后会尝试通过 EmailJS API 发送邮件（需要你自己的 EmailJS 账号）。
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr; gap:8px; margin-top:10px;">
+                    <input id="emailjsServiceId" placeholder="EmailJS Service ID">
+                    <input id="emailjsTemplateId" placeholder="EmailJS Template ID">
+                    <input id="emailjsPublicKey" placeholder="EmailJS Public Key">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeProfile()">取消</button>
+                <button class="btn btn-primary" onclick="saveProfile()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="api.js"></script>
     <script>
         function updateTime() {
             const now = new Date();
@@ -483,9 +512,94 @@
             if (el) localStorage.setItem("userMemo", el.value);
         }
 
+        const DEFAULT_USERS = {
+            logistics: '仓储员A',
+            commercial: '财务员A',
+            docs: '单证员A',
+            pm: '项目经理D'
+        };
+
+        function safeJsonParse(text, fallback) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function loadUserProfile() {
+            return safeJsonParse(localStorage.getItem('bpmProfile') || '', { name: '', email: '' }) || { name: '', email: '' };
+        }
+
+        function saveUserProfile(profile) {
+            localStorage.setItem('bpmProfile', JSON.stringify(profile || { name: '', email: '' }));
+        }
+
+        function loadUserEmails() {
+            return safeJsonParse(localStorage.getItem('bpmUserEmails') || '', {}) || {};
+        }
+
+        function saveUserEmails(map) {
+            localStorage.setItem('bpmUserEmails', JSON.stringify(map || {}));
+        }
+
+        function upsertUserEmail(userName, email) {
+            if (!userName) return;
+            const map = loadUserEmails();
+            if (email) map[userName] = email;
+            else delete map[userName];
+            saveUserEmails(map);
+        }
+
+        function loadEmailJsConfig() {
+            return safeJsonParse(localStorage.getItem('bpmEmailjsConfig') || '', { serviceId: '', templateId: '', publicKey: '' }) || { serviceId: '', templateId: '', publicKey: '' };
+        }
+
+        function saveEmailJsConfig(cfg) {
+            localStorage.setItem('bpmEmailjsConfig', JSON.stringify(cfg || { serviceId: '', templateId: '', publicKey: '' }));
+        }
+
+        function updateUserTag() {
+            const p = loadUserProfile();
+            const tag = document.getElementById('currentUserTag');
+            if (!tag) return;
+            tag.textContent = p && p.name ? `当前用户：${p.name}` : '';
+        }
+
+        function openProfile() {
+            const p = loadUserProfile();
+            const cfg = loadEmailJsConfig();
+            document.getElementById('profileName').value = (p && p.name) || '';
+            document.getElementById('profileEmail').value = (p && p.email) || '';
+            document.getElementById('emailjsServiceId').value = (cfg && cfg.serviceId) || '';
+            document.getElementById('emailjsTemplateId').value = (cfg && cfg.templateId) || '';
+            document.getElementById('emailjsPublicKey').value = (cfg && cfg.publicKey) || '';
+            document.getElementById('profileMask').style.display = 'flex';
+            setTimeout(() => document.getElementById('profileName').focus(), 0);
+        }
+
+        function closeProfile() {
+            document.getElementById('profileMask').style.display = 'none';
+        }
+
+        function saveProfile() {
+            const name = String(document.getElementById('profileName').value || '').trim();
+            const email = String(document.getElementById('profileEmail').value || '').trim();
+            const cfg = {
+                serviceId: String(document.getElementById('emailjsServiceId').value || '').trim(),
+                templateId: String(document.getElementById('emailjsTemplateId').value || '').trim(),
+                publicKey: String(document.getElementById('emailjsPublicKey').value || '').trim()
+            };
+            saveUserProfile({ name, email });
+            saveEmailJsConfig(cfg);
+            upsertUserEmail(name, email);
+            updateUserTag();
+            closeProfile();
+        }
+
         const PROJECTS = [
             { id: '项目01', name: '项目01', sub: '当前进行中', enabled: true },
-            { id: '项目02', name: '项目02', sub: '对照组 (装饰)', enabled: true }
+            { id: '项目02', name: '项目02', sub: '对照组', enabled: true }
         ];
 
         const TABS = [
@@ -629,7 +743,15 @@
             if (unlocked) {
                 openBtn.style.display = '';
                 openBtn.onclick = () => {
+                    const profile = loadUserProfile();
+                    const tabDefaultUser = DEFAULT_USERS[tab.key] || '';
+                    const userName = (profile && profile.name) ? profile.name : (tabDefaultUser || tab.label);
+                    sessionStorage.setItem('currentUserName', userName);
+                    sessionStorage.setItem('currentUserEmail', (profile && profile.email) ? profile.email : '');
                     sessionStorage.setItem('authorizedDept', tab.dept);
+                    localStorage.setItem('bpmCurrentUserName', userName);
+                    localStorage.setItem('bpmAuthorizedDept', tab.dept);
+                    localStorage.setItem('bpmCurrentProjectId', currentProjectId);
                     window.location.href = tab.url;
                 };
             } else {
@@ -703,6 +825,7 @@
                 sessionStorage.setItem('currentProjectId', currentProjectId);
             }
 
+            updateUserTag();
             renderProjects();
             renderTabs();
             renderWorkspace();

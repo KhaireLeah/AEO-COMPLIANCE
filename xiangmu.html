@@ -677,14 +677,16 @@
 <script type="text/javascript" src="api.js"></script>
 <script type="text/javascript">
     // 权限校验
-    const authorizedDept = sessionStorage.getItem('authorizedDept');
+    const authorizedDept = sessionStorage.getItem('authorizedDept') || localStorage.getItem('bpmAuthorizedDept');
+    if (authorizedDept) sessionStorage.setItem('authorizedDept', authorizedDept);
     if (authorizedDept !== '项目管理') {
         alert('权限不足：只有项目经理可以访问此页面。');
         window.location.href = 'login.html';
     }
 
-    const CURRENT_USER = "项目经理D";
-    const IS_ADMIN = true;
+    const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "项目经理D";
+    if (CURRENT_USER) sessionStorage.setItem('currentUserName', CURRENT_USER);
+    const IS_ADMIN = (authorizedDept === '项目管理');
     const REQUIRED_DEPT = '项目管理';
     const DEFAULT_PROJECT_ID = '项目01';
 
@@ -697,7 +699,10 @@
     }
 
     function getCurrentProjectId() {
-        return normalizeProjectId(sessionStorage.getItem('currentProjectId'));
+        const pid = sessionStorage.getItem('currentProjectId') || localStorage.getItem('bpmCurrentProjectId');
+        const norm = normalizeProjectId(pid);
+        if (norm) sessionStorage.setItem('currentProjectId', norm);
+        return norm;
     }
 
     function updateTime() {
@@ -1000,6 +1005,7 @@
             docId,
             createdAt: new Date().toISOString()
         });
+        await trySendEmailToUser(userId, title, content);
     }
 
     async function saveLedgerEdit() {
@@ -1252,6 +1258,12 @@
             return;
         }
 
+        const maxBytes = 900 * 1024;
+        if (file.size > maxBytes) {
+            alert(`文件过大（${Math.ceil(file.size / 1024)}KB）。当前系统会把文件以 Base64 写入在线接口，建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB 的文件（PDF/图片/文本）。`);
+            return;
+        }
+
         var docType = document.getElementById('docType').value;
         var selectedVis = [];
         document.querySelectorAll('.vis-check:checked').forEach(cb => {
@@ -1273,7 +1285,7 @@
                 var fileData = e.target.result;
                 const projectId = getCurrentProjectId();
 
-                const activityText = CURRENT_USER + (reuploadDocId ? ' 重新存入了单据 ' : ' 存入了单据 ') + file.name;
+                const activityText = CURRENT_USER + (reuploadDocId ? ' 重新上传了单据 ' : ' 上传了单据 ') + file.name;
                 let docId = reuploadDocId;
 
                 if (reuploadDocId) {
@@ -1451,7 +1463,7 @@
         const text = String((item && item.text) || '');
         if (text.includes('删除') || text.includes('作废')) return 'delete';
         if (text.includes('通过') || text.includes('退回') || text.includes('审核')) return 'audit';
-        if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入')) return 'upload';
+        if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入') || text.includes('存入')) return 'upload';
         return 'other';
     }
 
@@ -1579,14 +1591,32 @@
         try {
             const projectId = getCurrentProjectId();
             const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
-            const docs = (docsAll || []).filter(d => normalizeProjectId(d.projectId) === projectId);
-            const acts = (actsAll || []).filter(a => normalizeProjectId(a.projectId) === projectId);
+            const docs = (docsAll || []).filter(d => {
+                if (!d || !d.projectId) return projectId === DEFAULT_PROJECT_ID;
+                return normalizeProjectId(String(d.projectId).trim()) === projectId;
+            });
+            const acts = (actsAll || []).filter(a => {
+                if (!a || !a.projectId) return projectId === DEFAULT_PROJECT_ID;
+                return normalizeProjectId(String(a.projectId).trim()) === projectId;
+            });
 
-            STATE.docs = docs;
-            STATE.activities = acts;
+            let finalDocs = docs;
+            let finalActs = acts;
+            let usingAll = false;
+            if (finalDocs.length === 0 && (docsAll || []).length > 0) {
+                finalDocs = docsAll || [];
+                usingAll = true;
+            }
+            if (finalActs.length === 0 && (actsAll || []).length > 0) {
+                finalActs = actsAll || [];
+                usingAll = true;
+            }
+
+            STATE.docs = finalDocs;
+            STATE.activities = finalActs;
             buildLastActivityIndex();
 
-            document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
+            document.getElementById('totalCount').innerText = usingAll ? `[ ${finalDocs.length} · 全部项目 ]` : `[ ${finalDocs.length} ]`;
             initTypeFilter();
             renderLedger();
             renderActivityPanels();
@@ -1621,6 +1651,9 @@
         initVisibilityControls();
         refreshData();
         loadNotifications();
+
+        const userNameEl = document.querySelector('.user-name');
+        if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
 
         document.addEventListener('click', e => {
             const userAvatar = document.querySelector('.user-avatar');
@@ -1665,6 +1698,7 @@
                 </div>
             </div>
         </div>
+        <div class="help"><a href="profile.html" style="text-decoration: none; color: inherit;">账号设置</a></div>
         <div class="help"><a href="news.html" style="text-decoration: none; color: inherit;">② 帮助</a></div>
         <div id="liveClock" class="datetime"></div>
     </div>
@@ -1798,6 +1832,7 @@
                         <option value="业务部">单证部</option>
                         <option value="仓储部">物流部</option>
                         <option value="财务部">商务部</option>
+                        <option value="项目管理">项目管理</option>
                     </select>
                     <select id="filterAudit">
                         <option value="all">全部状态</option>
@@ -1866,7 +1901,7 @@
 <!-- Avatar UI -->
 <div class="user-avatar" onclick="toggleLogoutMenu()">
     <div class="avatar-img">👤</div>
-    <div class="user-name">已登录: 项目经理D</div>
+    <div class="user-name">已登录: </div>
     <div class="logout-menu" id="logoutMenu">
         <div onclick="logout()">退出登录</div>
     </div>

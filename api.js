@@ -81,6 +81,7 @@ async function getActivities() {
         return await response.json();
     } catch (error) {
         console.error('Failed to fetch activities:', error);
+        alert('无法从服务器获取动态数据，请检查网络连接。');
         return [];
     }
 }
@@ -96,6 +97,7 @@ async function addActivity(activity) {
         return await response.json();
     } catch (error) {
         console.error('Failed to add activity:', error);
+        alert('记录动态失败：动态面板可能不会更新。请检查网络连接。');
     }
 }
 
@@ -161,5 +163,79 @@ async function deleteNotification(id) {
         return await response.json();
     } catch (error) {
         console.error('Failed to delete notification:', error);
+    }
+}
+
+function safeJsonParse(text, fallback) {
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        return fallback;
+    }
+}
+
+function loadUserEmails() {
+    return safeJsonParse(localStorage.getItem('bpmUserEmails') || '', {}) || {};
+}
+
+function getUserEmail(userName) {
+    if (!userName) return '';
+    const map = loadUserEmails();
+    return map && map[userName] ? String(map[userName]) : '';
+}
+
+function loadEmailJsConfig() {
+    return safeJsonParse(localStorage.getItem('bpmEmailjsConfig') || '', { serviceId: '', templateId: '', publicKey: '' }) || { serviceId: '', templateId: '', publicKey: '' };
+}
+
+function hasEmailJsConfig(cfg) {
+    return !!(cfg && cfg.serviceId && cfg.templateId && cfg.publicKey);
+}
+
+function getPmUserName() {
+    const v = localStorage.getItem('bpmPmUserName');
+    return (v && String(v).trim()) ? String(v).trim() : '项目经理D';
+}
+
+function setPmUserName(userName) {
+    const v = String(userName || '').trim();
+    if (!v) {
+        localStorage.removeItem('bpmPmUserName');
+        return;
+    }
+    localStorage.setItem('bpmPmUserName', v);
+}
+
+async function sendEmailByEmailJs(toEmail, subject, message) {
+    const cfg = loadEmailJsConfig();
+    if (!toEmail || !hasEmailJsConfig(cfg)) return false;
+
+    const payload = {
+        service_id: cfg.serviceId,
+        template_id: cfg.templateId,
+        user_id: cfg.publicKey,
+        template_params: {
+            to_email: toEmail,
+            subject: subject || '',
+            message: message || ''
+        }
+    };
+
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    return res.ok;
+}
+
+async function trySendEmailToUser(userName, subject, content) {
+    const toEmail = getUserEmail(userName);
+    if (!toEmail) return false;
+    try {
+        return await sendEmailByEmailJs(toEmail, subject, content);
+    } catch (e) {
+        console.error('Email send failed:', e);
+        return false;
     }
 }
