@@ -85,7 +85,7 @@ async function getActivities() {
 }
 
 async function addActivity(activity) {
-     try {
+    try {
         const response = await fetch(ACTIVITIES_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -95,5 +95,17 @@ async function addActivity(activity) {
         return await response.json();
     } catch (error) {
         console.error('Failed to add activity:', error);
+    }
+}
+
+async function deleteActivityAPI(id) {
+    try {
+        const response = await fetch(`${ACTIVITIES_URL}/${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete activity.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to delete activity:', error);
     }
 }

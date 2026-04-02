@@ -188,6 +188,167 @@
     color: rgba(0,0,0,0.85);
 }
 
+.ledger-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ledger-filters select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    outline: none;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.pill-ok { background: rgba(82,196,26,0.12); color: #389e0d; }
+.pill-warn { background: rgba(250,140,22,0.12); color: #d46b08; }
+.pill-bad { background: rgba(255,77,79,0.12); color: #cf1322; }
+
+.activity-panels details {
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.activity-panels summary {
+    padding: 12px 14px;
+    cursor: pointer;
+    font-weight: 700;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: #f8fbff;
+}
+
+.activity-panels summary::-webkit-details-marker { display: none; }
+
+.panel-body {
+    padding: 10px 14px;
+}
+
+.panel-empty {
+    color: rgba(0,0,0,0.45);
+    font-size: 13px;
+    padding: 6px 0;
+}
+
+.ledger-hint {
+    color: rgba(0,0,0,0.45);
+    font-size: 13px;
+    margin: 6px 0 12px;
+}
+
+.history-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(24,144,255,0.12);
+    color: #1890ff;
+    font-weight: 800;
+    font-size: 12px;
+    margin-left: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+    padding: 18px;
+}
+
+.modal h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+}
+
+.modal p {
+    margin: 0 0 14px;
+    color: rgba(0,0,0,0.45);
+    font-size: 13px;
+}
+
+.modal label {
+    display: block;
+    font-size: 12px;
+    color: rgba(0,0,0,0.65);
+    margin: 10px 0 6px;
+}
+
+.modal input, .modal textarea, .modal select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    outline: none;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.modal textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.btn {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.btn-primary {
+    background: #1890ff;
+    border-color: #1890ff;
+    color: #fff;
+}
+
+.btn-primary:hover { opacity: 0.92; }
+
 .action-link {
     color: #1890ff;
     text-decoration: none;
@@ -692,8 +853,14 @@
         if (IS_ADMIN || uploader === CURRENT_USER) {
             if (confirm('确定要删除该单据吗？')) {
                 try {
-                    const docs = await getDocs();
-                    const docToDelete = docs.find(d => d.id === docId);
+                    const docToDelete = await getDoc(docId);
+
+                    // 删除关联的动态
+                    const acts = await getActivities();
+                    const relatedActs = acts.filter(a => a.docId === docId);
+                    for (const act of relatedActs) {
+                        await deleteActivityAPI(act.id);
+                    }
 
                     await deleteDocAPI(docId);
 
@@ -701,14 +868,14 @@
                         text: CURRENT_USER + ' 删除了单据 ' + (docToDelete ? docToDelete.name : `ID: ${docId}`),
                         fileName: docToDelete ? docToDelete.name : '',
                         uploader: CURRENT_USER,
-                    visibility: 'all',
-                    projectId: (docToDelete && docToDelete.projectId) ? docToDelete.projectId : getCurrentProjectId()
+                        visibility: 'all',
+                        projectId: (docToDelete && docToDelete.projectId) ? normalizeProjectId(docToDelete.projectId) : getCurrentProjectId(),
+                        docId: docId
                     };
                     await addActivity(activity);
 
                     alert('单据已删除！');
-                    loadDocs();
-                    loadActivities();
+                    refreshData();
                 } catch (error) {
                     console.error('Error deleting doc:', error);
                     alert('删除失败，请检查网络连接。');
@@ -719,45 +886,406 @@
         }
     }
 
-    async function loadDocs() {
-        try {
-            const docs = await getDocs();
-            const projectId = getCurrentProjectId();
-            var pendingTable = document.getElementById('pendingDocsBody');
-            var pendingCount = 0;
+    const STATE = {
+        docs: [],
+        activities: [],
+        lastActivityByDocId: {}
+    };
 
+    function getLedgerHistory(doc) {
+        const h = doc && doc.ledgerHistory;
+        return Array.isArray(h) ? h : [];
+    }
+
+    function normalizeTags(input) {
+        if (!input) return [];
+        if (Array.isArray(input)) return input.map(x => String(x)).filter(Boolean);
+        return String(input).split(/[,，]/).map(s => s.trim()).filter(Boolean);
+    }
+
+    function openLedgerEdit(docId) {
+        if (!IS_ADMIN) {
+            alert('仅项目经理可编辑台账及审核状态。');
+            return;
+        }
+        const doc = STATE.docs.find(d => d.id === docId);
+        if (!doc) return;
+
+        const mask = document.getElementById('ledgerEditMask');
+        const idEl = document.getElementById('ledgerEditDocId');
+        const catEl = document.getElementById('ledgerEditCategory');
+        const noteEl = document.getElementById('ledgerEditNote');
+        const tagsEl = document.getElementById('ledgerEditTags');
+        const auditBlock = document.getElementById('ledgerAuditBlock');
+        const auditEl = document.getElementById('ledgerEditAudit');
+
+        idEl.value = docId;
+        const categories = Array.from(new Set(STATE.docs.map(d => getTypeCategory(d.type)))).sort();
+        catEl.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        catEl.value = (doc.ledgerCategory || getTypeCategory(doc.type)) || (categories[0] || '其他');
+
+        noteEl.value = doc.ledgerNote || '';
+        tagsEl.value = Array.isArray(doc.ledgerTags) ? doc.ledgerTags.join(',') : (doc.ledgerTags || '');
+
+        if (IS_ADMIN) {
+            auditBlock.style.display = '';
+            auditEl.value = doc.status || 'pending';
+        } else {
+            auditBlock.style.display = 'none';
+        }
+
+        mask.style.display = 'flex';
+        setTimeout(() => noteEl.focus(), 0);
+    }
+
+    function closeLedgerEdit() {
+        document.getElementById('ledgerEditMask').style.display = 'none';
+        document.getElementById('ledgerEditDocId').value = '';
+    }
+
+    async function saveLedgerEdit() {
+        const docId = document.getElementById('ledgerEditDocId').value;
+        if (!docId) return;
+
+        const doc = await getDoc(docId);
+        if (!doc) return;
+
+        const projectId = getCurrentProjectId();
+        const catEl = document.getElementById('ledgerEditCategory');
+        const noteEl = document.getElementById('ledgerEditNote');
+        const tagsEl = document.getElementById('ledgerEditTags');
+        const auditEl = document.getElementById('ledgerEditAudit');
+
+        const nextCategory = catEl.value || getTypeCategory(doc.type);
+        const nextNote = noteEl.value || '';
+        const nextTags = normalizeTags(tagsEl.value);
+
+        const prev = {
+            ledgerCategory: doc.ledgerCategory || '',
+            ledgerNote: doc.ledgerNote || '',
+            ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags)
+        };
+
+        const changes = {};
+        if (prev.ledgerCategory !== nextCategory) changes.ledgerCategory = { from: prev.ledgerCategory, to: nextCategory };
+        if (prev.ledgerNote !== nextNote) changes.ledgerNote = { from: prev.ledgerNote, to: nextNote };
+        if (JSON.stringify(prev.ledgerTags) !== JSON.stringify(nextTags)) changes.ledgerTags = { from: prev.ledgerTags, to: nextTags };
+
+        let nextStatus = doc.status || 'pending';
+        if (IS_ADMIN) {
+            const desired = auditEl.value || 'pending';
+            if (desired !== nextStatus) {
+                changes.status = { from: nextStatus, to: desired };
+                nextStatus = desired;
+            }
+        }
+
+        if (Object.keys(changes).length === 0) {
+            closeLedgerEdit();
+            return;
+        }
+
+        const history = getLedgerHistory(doc);
+        history.unshift({
+            time: new Date().toISOString(),
+            user: CURRENT_USER,
+            changes
+        });
+
+        const updated = {
+            ...doc,
+            ledgerCategory: nextCategory,
+            ledgerNote: nextNote,
+            ledgerTags: nextTags,
+            ledgerUpdatedAt: new Date().toISOString(),
+            ledgerUpdatedBy: CURRENT_USER,
+            ledgerHistory: history
+        };
+
+        if (IS_ADMIN) {
+            updated.status = nextStatus;
+        }
+
+        await updateDoc(docId, updated);
+        await addActivity({
+            text: `${CURRENT_USER} 更新了台账 ${doc.name || ''}`,
+            fileName: doc.name || '',
+            uploader: CURRENT_USER,
+            visibility: 'all',
+            docId: docId,
+            projectId: projectId
+        });
+
+        closeLedgerEdit();
+        refreshData();
+    }
+
+    function openHistory(docId) {
+        const doc = STATE.docs.find(d => d.id === docId);
+        if (!doc) return;
+        const mask = document.getElementById('historyMask');
+        const sub = document.getElementById('historySub');
+        const body = document.getElementById('historyBody');
+        const history = getLedgerHistory(doc);
+
+        sub.textContent = `单据：${doc.name || doc.id} · 共 ${history.length} 条记录`;
+        if (history.length === 0) {
+            body.innerHTML = '<div class="panel-empty">暂无修改记录</div>';
+        } else {
+            body.innerHTML = history.map(h => {
+                const time = h.time ? new Date(h.time).toLocaleString() : '';
+                const user = h.user || '-';
+                const changes = h.changes || {};
+                const lines = Object.keys(changes).map(k => {
+                    const c = changes[k];
+                    const from = (c && c.from != null) ? JSON.stringify(c.from) : '';
+                    const to = (c && c.to != null) ? JSON.stringify(c.to) : '';
+                    return `<div style="font-size:12px;color:rgba(0,0,0,0.65);margin-top:6px;"><span style="font-weight:800;">${k}</span>：${from} → ${to}</div>`;
+                }).join('');
+                return `<div style="border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:12px;margin-bottom:10px;">
+                    <div style="font-weight:800;">${user} · ${time}</div>
+                    ${lines}
+                </div>`;
+            }).join('');
+        }
+
+        mask.style.display = 'flex';
+    }
+
+    function closeHistory() {
+        document.getElementById('historyMask').style.display = 'none';
+        document.getElementById('historyBody').innerHTML = '';
+    }
+
+    function getDeptDisplay(dept) {
+        if (dept === '业务部') return '单证部';
+        if (dept === '仓储部') return '物流部';
+        if (dept === '财务部') return '商务部';
+        return dept || '-';
+    }
+
+    function getTypeCategory(type) {
+        const t = String(type || '');
+        if (t.includes('合同') || t.includes('协议')) return '合同与协议';
+        if (t.includes('装箱') || t.includes('提单') || t.includes('物流') || t.includes('入库') || t.includes('出库') || t.includes('库存')) return '物流与仓储';
+        if (t.includes('报关') || t.includes('申报') || t.includes('海关') || t.includes('回执') || t.includes('通关')) return '报关与申报';
+        if (t.includes('发票') || t.includes('付款') || t.includes('结算') || t.includes('汇款')) return '财务与结算';
+        if (t.includes('资质') || t.includes('认证') || t.includes('AEO') || t.includes('许可证')) return '资质与合规';
+        return '其他';
+    }
+
+    function getAuditState(doc) {
+        const status = doc && doc.status;
+        return status && status !== 'pending' ? 'audited' : 'unaudited';
+    }
+
+    function getAuditDisplay(doc) {
+        const audited = getAuditState(doc) === 'audited';
+        return audited ? '<span class="status-pill pill-ok">已审核</span>' : '<span class="status-pill pill-warn">未审核</span>';
+    }
+
+    function getProcessDisplay(doc) {
+        const status = doc && doc.status;
+        if (status === 'passed') return '<span class="status-pill pill-ok">已通过</span>';
+        if (status === 'rejected') return '<span class="status-pill pill-bad">被退回</span>';
+        return '<span class="status-pill pill-warn">待审核</span>';
+    }
+
+    function formatProjectId(pid) {
+        return normalizeProjectId(pid);
+    }
+
+    function initTypeFilter() {
+        const select = document.getElementById('filterType');
+        if (!select) return;
+        const categories = Array.from(new Set(STATE.docs.map(d => getTypeCategory(d.type)))).sort();
+        select.innerHTML = '<option value="all">全部分类</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function getLedgerFilters() {
+        const dept = (document.getElementById('filterDept') || {}).value || 'all';
+        const audit = (document.getElementById('filterAudit') || {}).value || 'all';
+        const type = (document.getElementById('filterType') || {}).value || 'all';
+        return { dept, audit, type };
+    }
+
+    function renderLedger() {
+        const tbody = document.getElementById('ledgerBody');
+        if (!tbody) return;
+
+        const { dept, audit, type } = getLedgerFilters();
+
+        const rows = STATE.docs.filter(d => {
+            if (dept !== 'all' && d.dept !== dept) return false;
+            if (audit !== 'all' && getAuditState(d) !== audit) return false;
+            if (type !== 'all' && getTypeCategory(d.type) !== type) return false;
+            return true;
+        });
+
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">暂无单证</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        rows.forEach(doc => {
+            const tr = document.createElement('tr');
+            const category = getTypeCategory(doc.type);
+            const last = doc.id ? STATE.lastActivityByDocId[doc.id] : null;
+            const lastText = last && last.text ? String(last.text) : '';
+            const lastTime = last && last.createdAt ? new Date(last.createdAt).toLocaleString() : '';
+            const lastLine = lastText ? `<div style="font-size:12px;color:rgba(0,0,0,0.45);margin-top:4px;">最新：${lastText}${lastTime ? ` · ${lastTime}` : ''}</div>` : '';
+            const historyCount = getLedgerHistory(doc).length;
+            const historyBadge = historyCount > 0 ? `<span class="history-badge" onclick="openHistory('${doc.id}')">${historyCount}</span>` : '';
+
+            tr.innerHTML = `
+                <td>[ ${formatProjectId(doc.projectId)} ]</td>
+                <td>[ ${category} / ${doc.type || '-'} ]${historyBadge}</td>
+                <td>${getAuditDisplay(doc)}</td>
+                <td>${getProcessDisplay(doc)}${lastLine}</td>
+                <td>[ ${getDeptDisplay(doc.dept)} ]</td>
+                <td>[ ${doc.applicant || '-'} ]</td>
+                <td>[ ${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'} ]</td>
+                <td>
+                    <a href="#" style="color:#1890ff; text-decoration:none;" onclick="openLedgerEdit('${doc.id}')">编辑</a>
+                    ${IS_ADMIN ? ` | <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}', '${doc.applicant}')">删除</a>` : ''}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function classifyActivity(item) {
+        const text = String((item && item.text) || '');
+        if (text.includes('删除') || text.includes('作废')) return 'delete';
+        if (text.includes('通过') || text.includes('退回') || text.includes('审核')) return 'audit';
+        if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入')) return 'upload';
+        return 'other';
+    }
+
+    function renderActivityPanel(panelId, items) {
+        const container = document.getElementById(panelId);
+        if (!container) return;
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="panel-empty">暂无</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        items.slice(0, 20).forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'activity-item';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.borderBottom = '1px solid #f5f5f5';
+            div.style.paddingBottom = '6px';
+
+            const doc = item.docId ? STATE.docs.find(d => d.id === item.docId) : null;
+            const category = doc ? getTypeCategory(doc.type) : '';
+            const dept = doc ? getDeptDisplay(doc.dept) : '';
+            const meta = [category, dept].filter(Boolean).join(' · ');
+            const time = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
+
+            const textSpan = document.createElement('span');
+            textSpan.style.flex = '1';
+            textSpan.innerText = `[ ${item.text}${meta ? ` (${meta})` : ''} ] - ${time}`;
+            div.appendChild(textSpan);
+
+            if (item.docId) {
+                const openBtn = document.createElement('a');
+                openBtn.href = '#';
+                openBtn.style.cssText = 'color:#1d39c4; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:12px; background:#f0f5ff; padding:3px 8px; border-radius:4px; border:1px solid #adc6ff;';
+                openBtn.innerText = '📄 打开文件';
+                openBtn.onclick = (e) => {
+                    e.preventDefault();
+                    viewFile(item.uploader || '', item.fileName || '', item.visibility, item.docId);
+                };
+                div.appendChild(openBtn);
+            }
+
+            container.appendChild(div);
+        });
+    }
+
+    function renderActivityPanels() {
+        const upload = [];
+        const audit = [];
+        const del = [];
+        const other = [];
+
+        STATE.activities.forEach(item => {
+            const c = classifyActivity(item);
+            if (c === 'upload') upload.push(item);
+            else if (c === 'audit') audit.push(item);
+            else if (c === 'delete') del.push(item);
+            else other.push(item);
+        });
+
+        const setCount = (id, n) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = `[ ${n} ]`;
+        };
+
+        setCount('countUpload', upload.length);
+        setCount('countAudit', audit.length);
+        setCount('countDelete', del.length);
+        setCount('countOther', other.length);
+
+        renderActivityPanel('actUpload', upload);
+        renderActivityPanel('actAudit', audit);
+        renderActivityPanel('actDelete', del);
+        renderActivityPanel('actOther', other);
+    }
+
+    function buildLastActivityIndex() {
+        const index = {};
+        STATE.activities.forEach(item => {
+            if (!item.docId) return;
+            if (!index[item.docId]) index[item.docId] = item;
+        });
+        STATE.lastActivityByDocId = index;
+    }
+
+    async function refreshData() {
+        try {
+            const projectId = getCurrentProjectId();
+            const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
+            const docs = (docsAll || []).filter(d => normalizeProjectId(d.projectId) === projectId);
+            const acts = (actsAll || []).filter(a => normalizeProjectId(a.projectId) === projectId);
+
+            STATE.docs = docs;
+            STATE.activities = acts;
+            buildLastActivityIndex();
+
+            initTypeFilter();
+            renderLedger();
+            renderActivityPanels();
+            
+            // 更新“未处理单据”列表
+            const pendingTable = document.getElementById('pendingDocsBody');
+            let pendingCount = 0;
             pendingTable.innerHTML = '';
-            docs.forEach(function(doc) {
-                const docProjectId = normalizeProjectId(doc.projectId);
-                if (docProjectId !== projectId) return;
+            
+            docs.forEach(doc => {
                 var canSee = false;
                 if (IS_ADMIN || doc.applicant === CURRENT_USER) canSee = true;
-
                 var visArray = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
-                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) {
-                    canSee = true;
-                }
+                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canSee = true;
 
                 if (canSee) {
                     if (doc.dept === REQUIRED_DEPT && doc.status === 'pending') pendingCount++;
-
                     var tr = document.createElement('tr');
-
                     var statusDisplay = '';
-                    if (doc.status === 'pending') {
-                        statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
-                    } else if (doc.status === 'passed') {
-                        statusDisplay = '<span style="color: #52c41a;">已通过</span>';
-                    } else if (doc.status === 'rejected') {
-                        statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
-                    }
+                    if (doc.status === 'pending') statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
+                    else if (doc.status === 'passed') statusDisplay = '<span style="color: #52c41a;">已通过</span>';
+                    else if (doc.status === 'rejected') statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
 
                     const actions = `
                         <a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
                         ${(doc.status === 'rejected' && doc.applicant === CURRENT_USER) ? ` | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload('${doc.id}')">重新上传</a>` : ''}
                         ${(IS_ADMIN || doc.applicant === CURRENT_USER) ? ` | <a href="#" class="action-link" style="color: #ff4d4f;" onclick="deleteDoc('${doc.id}', '${doc.applicant}')">删除</a>` : ''}
                     `;
-
                     tr.innerHTML = `<td>[ ${doc.id} ]</td>
                                   <td>[ ${doc.type} ]</td>
                                   <td>${statusDisplay}</td>
@@ -768,65 +1296,16 @@
                 }
             });
             document.getElementById('pendingCount').innerText = '[ ' + pendingCount + ' ]';
+
         } catch (error) {
-            console.error('Error loading docs:', error);
-            document.getElementById('pendingDocsBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">加载单据列表失败，请检查网络连接。</td></tr>';
+            console.error('Failed to refresh data:', error);
+            const tbody = document.getElementById('ledgerBody');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
         }
     }
 
-    async function loadActivities() {
-        try {
-            const activities = await getActivities();
-            const projectId = getCurrentProjectId();
-            var container = document.getElementById('activitiesBody');
-            container.innerHTML = '';
-            let shown = 0;
-            activities.forEach(function(item) {
-                if (shown >= 20) return;
-                const itemProjectId = normalizeProjectId(item.projectId);
-                if (itemProjectId !== projectId) return;
-                var canSee = false;
-                if (IS_ADMIN || item.uploader === CURRENT_USER) canSee = true;
-                var visArray = Array.isArray(item.visibility) ? item.visibility : [item.visibility];
-                if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canSee = true;
-
-                if (canSee) {
-                    shown++;
-                    var div = document.createElement('div');
-                    div.className = 'activity-item';
-                    div.style.display = 'flex';
-                    div.style.justifyContent = 'space-between';
-                    div.style.alignItems = 'center';
-                    div.style.borderBottom = '1px solid #f5f5f5';
-                    div.style.paddingBottom = '8px';
-
-                    var textSpan = document.createElement('span');
-                    textSpan.style.flex = '1';
-                    textSpan.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
-                    div.appendChild(textSpan);
-
-                    if (item.docId) {
-                        var openBtn = document.createElement('a');
-                        openBtn.href = '#';
-                        openBtn.style.cssText = 'color:#1890ff; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:12px; background:#f0f7ff; padding:3px 8px; border-radius:4px; border:1px solid #91caff;';
-                        openBtn.innerText = '📄 打开文件';
-                        openBtn.onclick = function(e) {
-                            e.preventDefault();
-                            viewFile(item.uploader, item.fileName, item.visibility, item.docId);
-                        };
-                        div.appendChild(openBtn);
-                    }
-                    container.appendChild(div);
-                }
-            });
-            if (shown === 0) {
-                container.innerHTML = '<div style="color:rgba(0,0,0,0.45); font-size:13px; padding:8px 0;">暂无动态</div>';
-            }
-        } catch (error) {
-            console.error('Error loading activities:', error);
-            document.getElementById('activitiesBody').innerHTML = '<div style="color: red;">加载动态失败，请检查网络连接。</div>';
-        }
-    }
+    async function loadDocs() { await refreshData(); }
+    async function loadActivities() { await refreshData(); }
 
     window.onload = function() {
         setInterval(updateTime, 1000);
@@ -920,6 +1399,47 @@
             </div>
 
             <div class="doc-section">
+                <div class="dept-header">全员台账 (项目汇总)</div>
+                <div class="ledger-hint">所有人可查看台账明细，仅项目经理拥有审核与删除权限。</div>
+                
+                <div class="ledger-filters">
+                    <select id="filterDept" onchange="renderLedger()">
+                        <option value="all">全部部门</option>
+                        <option value="业务部">单证部</option>
+                        <option value="仓储部">物流部</option>
+                        <option value="财务部">商务部</option>
+                    </select>
+                    <select id="filterAudit" onchange="renderLedger()">
+                        <option value="all">全部审核状态</option>
+                        <option value="audited">已审核</option>
+                        <option value="unaudited">未审核</option>
+                    </select>
+                    <select id="filterType" onchange="renderLedger()">
+                        <option value="all">全部分类</option>
+                    </select>
+                </div>
+
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">项目</th>
+                            <th>分类 / 类型</th>
+                            <th style="width: 100px;">审核</th>
+                            <th>流程状态</th>
+                            <th style="width: 100px;">所属部门</th>
+                            <th style="width: 100px;">申请人</th>
+                            <th style="width: 180px;">提交时间</th>
+                            <th style="width: 120px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerBody">
+                        <tr><td colspan="8" style="text-align:center; color:#999;">正在加载台账...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="doc-section">
+                <div class="dept-header">单据上传</div>
                 <div class="tabs">
                     <div class="tab active">[ 未处理单据 ]</div>
                     <div class="tab">已处理单据</div>
@@ -971,14 +1491,69 @@
             </div>
 
             <div class="activities-section">
-                <div class="activities-title" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>最新动态 (财务)</span>
-                    <span style="font-size:12px; color:rgba(0,0,0,0.45); font-weight:400;">点击条目可打开文件</span>
-                </div>
-                <div id="activitiesBody">
-                    <!-- 由 JS 填充 -->
+                <div class="dept-header">实时动态 (项目组)</div>
+                <div class="activity-panels">
+                    <details open>
+                        <summary>上传区域动态 <span id="countUpload" class="history-badge">0</span></summary>
+                        <div class="panel-body" id="actUpload"></div>
+                    </details>
+                    <details>
+                        <summary>审核区域动态 <span id="countAudit" class="history-badge">0</span></summary>
+                        <div class="panel-body" id="actAudit"></div>
+                    </details>
+                    <details>
+                        <summary>删除/作废记录 <span id="countDelete" class="history-badge">0</span></summary>
+                        <div class="panel-body" id="actDelete"></div>
+                    </details>
+                    <details>
+                        <summary>其他操作记录 <span id="countOther" class="history-badge">0</span></summary>
+                        <div class="panel-body" id="actOther"></div>
+                    </details>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-mask" id="ledgerEditMask">
+    <div class="modal">
+        <h3>台账编辑 (仅经理可用)</h3>
+        <p id="ledgerEditTitle">更新单据的分类、备注及审核状态</p>
+        <input type="hidden" id="ledgerEditDocId">
+        
+        <label>台账分类</label>
+        <select id="ledgerEditCategory"></select>
+        
+        <label>台账备注</label>
+        <textarea id="ledgerEditNote" placeholder="请输入针对该单据的备注信息..."></textarea>
+        
+        <label>标签 (逗号分隔)</label>
+        <input type="text" id="ledgerEditTags" placeholder="例如：紧急, 待补录">
+        
+        <div id="ledgerAuditBlock">
+            <label>审核结果</label>
+            <select id="ledgerEditAudit">
+                <option value="pending">待审核 (Pending)</option>
+                <option value="passed">审核通过 (Passed)</option>
+                <option value="rejected">退回重报 (Rejected)</option>
+            </select>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn" onclick="closeLedgerEdit()">取消</button>
+            <button class="btn btn-primary" onclick="saveLedgerEdit()">保存更新</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-mask" id="historyMask">
+    <div class="modal">
+        <h3>修改历史</h3>
+        <p id="historySub" style="margin-bottom: 12px;"></p>
+        <div id="historyBody" style="max-height: 400px; overflow-y: auto;"></div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="closeHistory()">关闭</button>
         </div>
     </div>
 </div>

@@ -576,6 +576,13 @@
             try {
                 const docToDelete = await getDoc(docId);
 
+                // 删除关联的动态
+                const acts = await getActivities();
+                const relatedActs = acts.filter(a => a.docId === docId);
+                for (const act of relatedActs) {
+                    await deleteActivityAPI(act.id);
+                }
+
                 await deleteDocAPI(docId);
 
                 var activity = {
