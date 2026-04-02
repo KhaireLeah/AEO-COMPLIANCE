@@ -16,6 +16,18 @@ async function getDocs() {
     }
 }
 
+async function getDoc(id) {
+    try {
+        const response = await fetch(`${DOCS_URL}/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch doc.');
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to fetch doc:', error);
+        alert('无法从服务器获取单据详情，请检查网络连接。');
+        return null;
+    }
+}
+
 async function addDoc(doc) {
     try {
         const response = await fetch(DOCS_URL, {

@@ -121,10 +121,8 @@
 
         .content-area {
             flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 40px;
+            overflow: auto;
         }
 
         .login-card {
@@ -184,6 +182,237 @@
         }
 
         .login-btn:hover { opacity: 0.9; }
+
+        .workspace {
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            min-height: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .workspace-top {
+            padding: 22px 22px 0;
+        }
+
+        .workspace-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            margin-bottom: 14px;
+        }
+
+        .workspace-title h1 {
+            font-size: 20px;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .workspace-title .sub {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        .tabbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .tab:hover {
+            border-color: rgba(24,144,255,0.35);
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            background: rgba(24,144,255,0.08);
+            border-color: rgba(24,144,255,0.35);
+            color: var(--primary-color);
+        }
+
+        .tab.locked {
+            opacity: 0.6;
+        }
+
+        .workspace-body {
+            padding: 18px 22px 22px;
+            flex: 1;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 980px) {
+            .cards { grid-template-columns: 1fr; }
+        }
+
+        .card2 {
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 16px;
+            padding: 16px;
+            background: #fff;
+        }
+
+        .card2-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .card2-kv {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .kv {
+            border-radius: 12px;
+            padding: 12px;
+            background: #f6f9ff;
+            border: 1px solid rgba(24,144,255,0.10);
+        }
+
+        .kv .k {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .kv .v {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .workspace-actions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover { opacity: 0.92; }
+
+        .project-item {
+            padding: 14px 22px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .project-item:hover {
+            background: #f8fbff;
+            color: var(--primary-color);
+        }
+
+        .project-item.active {
+            background: #f0f7ff;
+            border-left-color: var(--primary-color);
+        }
+
+        .project-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .project-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+            padding: 18px;
+        }
+
+        .modal h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .modal p {
+            margin: 0 0 14px;
+            color: var(--text-sub);
+            font-size: 13px;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+            letter-spacing: 2px;
+        }
+
+        .modal input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 14px;
+        }
     </style>
 </head>
 <body>
@@ -198,19 +427,8 @@
 
     <div class="main-layout">
         <aside class="sidebar">
-            <div class="nav-title">部门概览</div>
-            <div class="nav-item" onclick="location.href='yewu.html'">
-                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" width="20"> <span>业务部</span>
-            </div>
-            <div class="nav-item" onclick="location.href='cangchu.html'">
-                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMjEuOCA4LjdsLTEuNC0xLjVMNy43IDQuNCA2LjMgNS44bDEyLjUgMTEuMmwzLjEtMy4xYy42LS42LjYtMS41IDAtMi4xek0xNy41IDEuOWwtMS40IDEuNEwzLjggMTUuOGwtMS40IDEuNGMtLjYtLjYtMS41LS42LTIuMSAwcy0uNiAxLjUgMCAyLjFsMy41IDMuNWMyLjIgMi4yIDUuOCAyLjIgOCAwTDIxLjggOC43Yy42LS42LjYtMS41IDAtMi4xek0xNiAxMy4ybDEuNCAxLjRMMTAuMiAyMWwtMS40LTEuNEwxNiAxMy4yeiIvPjwvc3ZnPg==" alt="" width="20"> <span>仓储部</span>
-            </div>
-            <div class="nav-item" onclick="location.href='caiwu.html'">
-                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" width="20"> <span>财务部</span>
-            </div>
-            <div class="nav-item" onclick="location.href='xiangmu.html'">
-                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNzI2MmZkIiBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMzhjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTQgNCAxLjc5IDQgNC0xLjc5IDQtNCA0em0wLTEwYy0yLjc2IDAtNS0yLjI0LTUtNXMyLjI0LTUgNS01IDUgMi4yNCA1IDUtMi4yNCA1LTUgNXoiLz48L3N2Zz4=" alt="" width="20"> <span>项目管理</span>
-            </div>
+            <div class="nav-title">项目切换轴</div>
+            <div id="projectNav"></div>
 
             <div class="memo-box">
                 <h5>个人备忘录</h5>
@@ -219,16 +437,37 @@
         </aside>
 
         <main class="content-area">
-            <div class="login-card">
-                <h1>身份验证</h1>
-                <p>请输入您的专属代码以访问工作台</p>
-                
-                <div class="input-group">
-                    <input type="password" id="authCode" class="login-input" placeholder="验证代码" onkeydown="if(event.keyCode==13) checkLogin();">
+            <div class="workspace">
+                <div class="workspace-top">
+                    <div class="workspace-title">
+                        <div>
+                            <h1 id="workspaceH1">工作区</h1>
+                            <div class="sub" id="workspaceSub"></div>
+                        </div>
+                        <div class="tabbar" id="deptTabs"></div>
+                    </div>
                 </div>
-                <button class="login-btn" onclick="checkLogin()">进入系统</button>
+                <div class="workspace-body">
+                    <div class="cards" id="cards"></div>
+                    <div class="workspace-actions">
+                        <button class="btn" onclick="sessionStorage.clear(); location.href='index.html'">退出登录</button>
+                        <button class="btn btn-primary" id="openDeptBtn" style="display:none;">进入工作台</button>
+                    </div>
+                </div>
             </div>
         </main>
+    </div>
+
+    <div class="modal-mask" id="authMask">
+        <div class="modal" role="dialog" aria-modal="true">
+            <h3 id="authTitle">身份验证</h3>
+            <p id="authDesc">请输入代码以继续</p>
+            <input type="password" id="authInput" placeholder="验证代码">
+            <div class="modal-actions">
+                <button class="btn" onclick="closeAuth()">取消</button>
+                <button class="btn btn-primary" onclick="submitAuth()">验证</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -239,39 +478,225 @@
             document.getElementById("liveClock").textContent = timeStr;
         }
 
-        function checkLogin() {
-            const code = document.getElementById("authCode").value;
-            const routes = {
-                'dzy01': { url: 'yewu.html', dept: '业务部' },
-                'czb01': { url: 'cangchu.html', dept: '仓储部' },
-                'cwb01': { url: 'caiwu.html', dept: '财务部' },
-                'gl01': { url: 'xiangmu.html', dept: '项目管理' }
-            };
-            
-            if (routes[code]) {
-                // 存储授权部门到 sessionStorage，用于权限校验
-                sessionStorage.setItem('authorizedDept', routes[code].dept);
-                window.location.replace(routes[code].url); // 使用 replace 确保更稳定的跳转
-            } else if (code === '666') {
-                // 管理员全权限
-                sessionStorage.setItem('authorizedDept', '项目管理');
-                window.location.replace('xiangmu.html'); 
+        function saveMemo() {
+            const el = document.getElementById("memoInput");
+            if (el) localStorage.setItem("userMemo", el.value);
+        }
+
+        const PROJECTS = [
+            { id: 'HCVAC', name: 'HCVAC 镀膜机出口项目', sub: '出口合规 · 物流协同 · 海关申报' },
+            { id: 'NAURA', name: 'NAURA 零件进口项目', sub: '进口合规 · 保税仓储 · 供应链计划' }
+        ];
+
+        const TABS = [
+            { key: 'logistics', label: '物流部 (Logistics)', dept: '仓储部', url: 'cangchu.html', code: 'czb01' },
+            { key: 'commercial', label: '商务部 (Commercial)', dept: '财务部', url: 'caiwu.html', code: 'cwb01' },
+            { key: 'docs', label: '单证部 (Documentation)', dept: '业务部', url: 'yewu.html', code: 'dzy01' },
+            { key: 'pm', label: '项目管理 (PM)', dept: '项目管理', url: 'xiangmu.html', code: 'gl01' }
+        ];
+
+        let currentProjectId = sessionStorage.getItem('currentProjectId') || PROJECTS[0].id;
+        let activeTabKey = sessionStorage.getItem('activeTabKey') || TABS[0].key;
+        let pendingTabKey = null;
+
+        function getProjectById(id) {
+            return PROJECTS.find(p => p.id === id) || PROJECTS[0];
+        }
+
+        function isUnlocked(tabKey) {
+            return sessionStorage.getItem(`tabUnlocked:${tabKey}`) === '1';
+        }
+
+        function setUnlocked(tabKey) {
+            sessionStorage.setItem(`tabUnlocked:${tabKey}`, '1');
+        }
+
+        function renderProjects() {
+            const root = document.getElementById('projectNav');
+            root.innerHTML = '';
+            PROJECTS.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'project-item' + (p.id === currentProjectId ? ' active' : '');
+                div.onclick = () => setProject(p.id);
+                div.innerHTML = `<div class="project-name">${p.name}</div><div class="project-sub">${p.sub}</div>`;
+                root.appendChild(div);
+            });
+        }
+
+        function setProject(projectId) {
+            currentProjectId = projectId;
+            sessionStorage.setItem('currentProjectId', currentProjectId);
+            renderProjects();
+            renderWorkspace();
+        }
+
+        function renderTabs() {
+            const root = document.getElementById('deptTabs');
+            root.innerHTML = '';
+            TABS.forEach(t => {
+                const div = document.createElement('div');
+                const locked = !isUnlocked(t.key);
+                div.className = 'tab' + (t.key === activeTabKey ? ' active' : '') + (locked ? ' locked' : '');
+                div.textContent = locked ? `${t.label} 🔒` : t.label;
+                div.onclick = () => onTabClick(t.key);
+                root.appendChild(div);
+            });
+        }
+
+        function getCardDefs(tabKey, unlocked) {
+            const lockedHint = unlocked ? '' : '（需要验证后展示）';
+            if (tabKey === 'logistics') {
+                return [
+                    { title: `供应链采购进度 ${lockedHint}`, kvs: [
+                        { k: '计划节点', v: unlocked ? 'PO 下发 / 交期确认 / 到港预约' : '—' },
+                        { k: '风险提示', v: unlocked ? '关键件交期需复核' : '—' }
+                    ]},
+                    { title: `仓库实时库存 / 七点检查 ${lockedHint}`, kvs: [
+                        { k: '保税状态', v: unlocked ? '在库 / 待出库 / 在途' : '—' },
+                        { k: '七点检查', v: unlocked ? '今日已完成' : '—' }
+                    ]}
+                ];
+            }
+            if (tabKey === 'commercial') {
+                return [
+                    { title: `合作方准入 ${lockedHint}`, kvs: [
+                        { k: '供应商资质', v: unlocked ? '已归档 / 待补充' : '—' },
+                        { k: '客户授信', v: unlocked ? '审批中' : '—' }
+                    ]},
+                    { title: `合同条款 ${lockedHint}`, kvs: [
+                        { k: '关键条款', v: unlocked ? '付款 / 交付 / 违约' : '—' },
+                        { k: '合规关注', v: unlocked ? '出口管制声明' : '—' }
+                    ]}
+                ];
+            }
+            if (tabKey === 'docs') {
+                return [
+                    { title: `单据合规性 ${lockedHint}`, kvs: [
+                        { k: '必备单证', v: unlocked ? '合同 / 发票 / 装箱单' : '—' },
+                        { k: '风险项', v: unlocked ? '品名/HS 编码一致性' : '—' }
+                    ]},
+                    { title: `海关回执 ${lockedHint}`, kvs: [
+                        { k: '申报状态', v: unlocked ? '回执待归档' : '—' },
+                        { k: '异常提示', v: unlocked ? '无' : '—' }
+                    ]}
+                ];
+            }
+            return [
+                { title: `整体进度 ${lockedHint}`, kvs: [
+                    { k: '里程碑', v: unlocked ? '计划 / 执行 / 交付' : '—' },
+                    { k: '协同预警', v: unlocked ? '0' : '—' }
+                ]},
+                { title: `AEO 达标率 ${lockedHint}`, kvs: [
+                    { k: '完成度', v: unlocked ? '92%' : '—' },
+                    { k: '待整改项', v: unlocked ? '2' : '—' }
+                ]}
+            ];
+        }
+
+        function renderWorkspace() {
+            const project = getProjectById(currentProjectId);
+            document.getElementById('workspaceH1').textContent = project.name;
+            document.getElementById('workspaceSub').textContent = `当前项目：${project.id} · 点击部门标签进行验证并展开面板`;
+
+            const tab = TABS.find(t => t.key === activeTabKey) || TABS[0];
+            const unlocked = isUnlocked(activeTabKey);
+
+            const cards = document.getElementById('cards');
+            cards.innerHTML = '';
+            const defs = getCardDefs(tab.key, unlocked);
+            defs.forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'card2';
+                el.innerHTML = `
+                    <div class="card2-title">${d.title}</div>
+                    <div class="card2-kv">
+                        ${d.kvs.map(kv => `<div class="kv"><div class="k">${kv.k}</div><div class="v">${kv.v}</div></div>`).join('')}
+                    </div>
+                `;
+                cards.appendChild(el);
+            });
+
+            const openBtn = document.getElementById('openDeptBtn');
+            if (unlocked) {
+                openBtn.style.display = '';
+                openBtn.onclick = () => {
+                    sessionStorage.setItem('authorizedDept', tab.dept);
+                    window.location.href = tab.url;
+                };
             } else {
-                alert("验证代码错误，请重试");
+                openBtn.style.display = 'none';
             }
         }
 
-        function saveMemo() {
-            localStorage.setItem("userMemo", document.getElementById("memoInput").value);
+        function onTabClick(tabKey) {
+            activeTabKey = tabKey;
+            sessionStorage.setItem('activeTabKey', activeTabKey);
+            renderTabs();
+            if (isUnlocked(tabKey)) {
+                renderWorkspace();
+                return;
+            }
+            pendingTabKey = tabKey;
+            openAuth();
         }
 
+        function openAuth() {
+            const tab = TABS.find(t => t.key === pendingTabKey) || TABS[0];
+            document.getElementById('authTitle').textContent = `验证进入：${tab.label}`;
+            document.getElementById('authDesc').textContent = `请输入对应代码（示例：${tab.code}）`;
+            const mask = document.getElementById('authMask');
+            const input = document.getElementById('authInput');
+            input.value = '';
+            mask.style.display = 'flex';
+            setTimeout(() => input.focus(), 0);
+        }
+
+        function closeAuth() {
+            document.getElementById('authMask').style.display = 'none';
+            pendingTabKey = null;
+        }
+
+        function submitAuth() {
+            const tab = TABS.find(t => t.key === pendingTabKey);
+            if (!tab) return;
+            const code = document.getElementById('authInput').value;
+            if (code === tab.code || code === '666') {
+                setUnlocked(tab.key);
+                if (code === '666') {
+                    TABS.forEach(t => setUnlocked(t.key));
+                }
+                closeAuth();
+                renderTabs();
+                renderWorkspace();
+            } else {
+                alert('验证代码错误，请重试');
+            }
+        }
+
+        document.getElementById('authMask').addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'authMask') closeAuth();
+        });
+
+        document.getElementById('authInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitAuth();
+            if (e.key === 'Escape') closeAuth();
+        });
+
         window.onload = function() {
-            setInterval(updateTime, 1000);
             updateTime();
+            setInterval(updateTime, 1000);
             document.getElementById("memoInput").value = localStorage.getItem("userMemo") || "";
             window.addEventListener('storage', (e) => {
-                if (e.key === 'userMemo') document.getElementById("memoInput").value = e.newValue;
+                if (e.key === 'userMemo') document.getElementById("memoInput").value = e.newValue || "";
             });
+
+            if (!sessionStorage.getItem('currentProjectId')) {
+                sessionStorage.setItem('currentProjectId', currentProjectId);
+            }
+
+            renderProjects();
+            renderTabs();
+            renderWorkspace();
         }
     </script>
 </body>
