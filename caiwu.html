@@ -1542,9 +1542,16 @@
             const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
             const docs = (docsAll || []).filter(d => normalizeProjectId((d || {}).projectId) === projectId);
             const acts = (actsAll || []).filter(a => normalizeProjectId((a || {}).projectId) === projectId);
+            const visibleActs = (acts || []).filter(a => {
+                if (IS_ADMIN) return true;
+                if (!a) return false;
+                if (String(a.uploader || '') === String(CURRENT_USER || '')) return true;
+                const vis = parseVisibilityInput(a.visibility);
+                return vis.includes('all') || vis.includes(REQUIRED_DEPT);
+            });
 
             STATE.docs = docs;
-            STATE.activities = acts;
+            STATE.activities = visibleActs;
             buildLastActivityIndex();
 
             initTypeFilter();

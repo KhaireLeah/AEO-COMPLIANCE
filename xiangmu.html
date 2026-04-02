@@ -1727,9 +1727,16 @@
             const acts = (actsAll || []).filter(a => {
                 return normalizeProjectId((a || {}).projectId) === projectId;
             });
+            const visibleActs = (acts || []).filter(a => {
+                if (IS_ADMIN) return true;
+                if (!a) return false;
+                if (String(a.uploader || '') === String(CURRENT_USER || '')) return true;
+                const vis = parseVisibilityInput(a.visibility);
+                return vis.includes('all') || vis.includes(REQUIRED_DEPT);
+            });
 
             STATE.docs = docs;
-            STATE.activities = acts;
+            STATE.activities = visibleActs;
             buildLastActivityIndex();
 
             document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
