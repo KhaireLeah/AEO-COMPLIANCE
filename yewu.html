@@ -418,7 +418,7 @@
     margin: 10px 0 6px;
 }
 
-.modal input, .modal textarea, .modal select {
+.modal input:not([type="checkbox"]), .modal textarea, .modal select {
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
@@ -426,6 +426,11 @@
     outline: none;
     box-sizing: border-box;
     font-size: 14px;
+}
+
+.modal input[type="checkbox"] {
+    width: auto;
+    padding: 0;
 }
 
 .modal textarea {
@@ -1628,6 +1633,7 @@
         // Initial data load
         loadDocs();
         loadActivities();
+        loadNotifications();
 
         // Hide logout menu on outside click
         document.addEventListener('click', function(e) {
@@ -1641,6 +1647,7 @@
         setInterval(() => {
             loadDocs();
             loadActivities();
+            loadNotifications();
         }, 5000); // Changed to 5s for better real-time feel
     }
 </script>

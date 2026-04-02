@@ -115,7 +115,7 @@ async function deleteActivityAPI(id) {
 
 async function getNotifications() {
     try {
-        const response = await fetch(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc');
+        const response = await fetch(NOTIFICATIONS_URL + '?sortBy=createdAt&order=desc&limit=200');
         if (!response.ok) throw new Error('Failed to fetch notifications.');
         return await response.json();
     } catch (error) {

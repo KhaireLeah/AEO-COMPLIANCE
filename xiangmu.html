@@ -463,7 +463,7 @@
     margin: 10px 0 6px;
 }
 
-.modal input, .modal textarea, .modal select {
+.modal input:not([type="checkbox"]), .modal textarea, .modal select {
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
@@ -471,6 +471,11 @@
     outline: none;
     box-sizing: border-box;
     font-size: 14px;
+}
+
+.modal input[type="checkbox"] {
+    width: auto;
+    padding: 0;
 }
 
 .modal textarea {
@@ -1432,6 +1437,8 @@
                 <td>${doc.applicant || '-'}</td>
                 <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'}</td>
                 <td>
+                    <a href="#" class="action-link" onclick="viewFile('', '', '', '${doc.id}')">查看</a>
+                    |
                     <a href="#" class="action-link" onclick="openLedgerEdit('${doc.id}')">编辑</a>
                     | <a href="#" class="action-link" style="color:#ff4d4f;" onclick="deleteDoc('${doc.id}')">删除</a>
                 </td>
@@ -1613,6 +1620,7 @@
 
         initVisibilityControls();
         refreshData();
+        loadNotifications();
 
         document.addEventListener('click', e => {
             const userAvatar = document.querySelector('.user-avatar');
@@ -1631,6 +1639,7 @@
         // Set a poller to refresh data periodically
         setInterval(() => {
             refreshData();
+            loadNotifications();
         }, 5000); // Changed from 15s to 5s for better real-time feel
     }
 </script>
