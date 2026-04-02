@@ -1806,7 +1806,8 @@
             buildLastActivityIndex();
 
             setInlineNotice('');
-            document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
+            const totalEl = document.getElementById('totalCount');
+            if (totalEl) totalEl.innerText = `[ ${docs.length} ]`;
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) {
                 const now = new Date();
@@ -1832,7 +1833,8 @@
             renderLedger();
             renderActivityPanels();
             setInlineNotice('数据加载失败：' + (error && error.message ? error.message : String(error || '未知错误')));
-            document.getElementById('totalCount').innerText = '[ N/A ]';
+            const totalEl = document.getElementById('totalCount');
+            if (totalEl) totalEl.innerText = '[ N/A ]';
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) pendingEl.innerText = 'N/A';
             const tbody = document.getElementById('ledgerBody');
@@ -1863,7 +1865,6 @@
 
         initVisibilityControls();
         refreshData();
-        loadNotifications();
 
         const userNameEl = document.querySelector('.user-name');
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
@@ -1888,7 +1889,6 @@
         setInterval(() => {
             if (document.hidden) return;
             refreshData();
-            loadNotifications();
         }, 20000);
     }
 </script>

@@ -1644,7 +1644,6 @@
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
 
         refreshData();
-        loadNotifications();
 
         document.addEventListener('click', function(e) {
             const userAvatar = document.querySelector('.user-avatar');
@@ -1656,7 +1655,6 @@
         setInterval(() => {
             if (document.hidden) return;
             refreshData();
-            loadNotifications();
         }, 20000);
     }
 </script>

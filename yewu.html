@@ -1653,7 +1653,6 @@
 
         // Initial data load
         refreshData();
-        loadNotifications();
 
         // Hide logout menu on outside click
         document.addEventListener('click', function(e) {
@@ -1667,7 +1666,6 @@
         setInterval(() => {
             if (document.hidden) return;
             refreshData();
-            loadNotifications();
         }, 20000);
     }
 </script>
