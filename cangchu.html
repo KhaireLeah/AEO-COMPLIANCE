@@ -186,6 +186,7 @@
     padding: 12px;
     border-bottom: 1px solid #f0f0f0;
     color: rgba(0,0,0,0.85);
+    vertical-align: middle;
 }
 
 .ledger-filters {
@@ -430,7 +431,7 @@
 }
 
 .memo-container {
-    margin: 120px 20px 20px 20px;
+    margin: 40px 20px 20px 20px;
     padding: 15px;
     background-color: #FFF9C4; 
     border: 1px solid #FBC02D;
@@ -927,6 +928,13 @@
         noteEl.value = doc.ledgerNote || '';
         tagsEl.value = Array.isArray(doc.ledgerTags) ? doc.ledgerTags.join(',') : (doc.ledgerTags || '');
 
+        // Load visibility
+        const visChecks = document.querySelectorAll('.edit-vis-check');
+        const currentVis = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
+        visChecks.forEach(cb => {
+            cb.checked = currentVis.includes(cb.value);
+        });
+
         if (IS_ADMIN) {
             auditBlock.style.display = '';
             auditEl.value = doc.status || 'pending';
@@ -960,16 +968,26 @@
         const nextNote = noteEl.value || '';
         const nextTags = normalizeTags(tagsEl.value);
 
+        // Get visibility from checkboxes
+        const visChecks = document.querySelectorAll('.edit-vis-check');
+        const nextVisibility = Array.from(visChecks).filter(cb => cb.checked).map(cb => cb.value);
+        if (nextVisibility.length === 0) {
+            alert('请至少选择一个可见部门。');
+            return;
+        }
+
         const prev = {
             ledgerCategory: doc.ledgerCategory || '',
             ledgerNote: doc.ledgerNote || '',
-            ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags)
+            ledgerTags: Array.isArray(doc.ledgerTags) ? doc.ledgerTags : normalizeTags(doc.ledgerTags),
+            visibility: Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility]
         };
 
         const changes = {};
         if (prev.ledgerCategory !== nextCategory) changes.ledgerCategory = { from: prev.ledgerCategory, to: nextCategory };
         if (prev.ledgerNote !== nextNote) changes.ledgerNote = { from: prev.ledgerNote, to: nextNote };
         if (JSON.stringify(prev.ledgerTags) !== JSON.stringify(nextTags)) changes.ledgerTags = { from: prev.ledgerTags, to: nextTags };
+        if (JSON.stringify(prev.visibility) !== JSON.stringify(nextVisibility)) changes.visibility = { from: prev.visibility, to: nextVisibility };
 
         let nextStatus = doc.status || 'pending';
         if (IS_ADMIN) {
@@ -997,6 +1015,7 @@
             ledgerCategory: nextCategory,
             ledgerNote: nextNote,
             ledgerTags: nextTags,
+            visibility: nextVisibility,
             ledgerUpdatedAt: new Date().toISOString(),
             ledgerUpdatedBy: CURRENT_USER,
             ledgerHistory: history
@@ -1066,11 +1085,12 @@
 
     function getTypeCategory(type) {
         const t = String(type || '');
-        if (t.includes('合同') || t.includes('协议')) return '合同与协议';
-        if (t.includes('装箱') || t.includes('提单') || t.includes('物流') || t.includes('入库') || t.includes('出库') || t.includes('库存')) return '物流与仓储';
-        if (t.includes('报关') || t.includes('申报') || t.includes('海关') || t.includes('回执') || t.includes('通关')) return '报关与申报';
-        if (t.includes('发票') || t.includes('付款') || t.includes('结算') || t.includes('汇款')) return '财务与结算';
-        if (t.includes('资质') || t.includes('认证') || t.includes('AEO') || t.includes('许可证')) return '资质与合规';
+        if (t.includes('合同') || t.includes('协议')) return '商务合同';
+        if (t.includes('装箱') || t.includes('提单') || t.includes('物流') || t.includes('入库') || t.includes('出库') || t.includes('库存')) return '物流单据';
+        if (t.includes('报关') || t.includes('申报') || t.includes('海关') || t.includes('回执') || t.includes('通关')) return '报关单证';
+        if (t.includes('发票') || t.includes('付款') || t.includes('结算') || t.includes('汇款')) return '财务凭证';
+        if (t.includes('资质') || t.includes('认证') || t.includes('AEO') || t.includes('许可证')) return '合规资质';
+        if (t.includes('技术') || t.includes('手册') || t.includes('规格') || t.includes('图纸')) return '技术资料';
         return '其他';
     }
 
@@ -1139,13 +1159,13 @@
             const historyBadge = historyCount > 0 ? `<span class="history-badge" onclick="openHistory('${doc.id}')">${historyCount}</span>` : '';
 
             tr.innerHTML = `
-                <td>[ ${formatProjectId(doc.projectId)} ]</td>
-                <td>[ ${category} / ${doc.type || '-'} ]${historyBadge}</td>
+                <td>${formatProjectId(doc.projectId)}</td>
+                <td>${category} / ${doc.type || '-'} ${historyBadge}</td>
                 <td>${getAuditDisplay(doc)}</td>
                 <td>${getProcessDisplay(doc)}${lastLine}</td>
-                <td>[ ${getDeptDisplay(doc.dept)} ]</td>
-                <td>[ ${doc.applicant || '-'} ]</td>
-                <td>[ ${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'} ]</td>
+                <td>${getDeptDisplay(doc.dept)}</td>
+                <td>${doc.applicant || '-'}</td>
+                <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'}</td>
                 <td>
                     <a href="#" style="color:#1890ff; text-decoration:none;" onclick="openLedgerEdit('${doc.id}')">编辑</a>
                     ${IS_ADMIN ? ` | <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}', '${doc.applicant}')">删除</a>` : ''}
@@ -1161,6 +1181,13 @@
         if (text.includes('通过') || text.includes('退回') || text.includes('审核')) return 'audit';
         if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入')) return 'upload';
         return 'other';
+    }
+
+    async function deleteActivity(id) {
+        if (confirm('确定要删除这条动态记录吗？')) {
+            await deleteActivityAPI(id);
+            refreshData();
+        }
     }
 
     function renderActivityPanel(panelId, items) {
@@ -1179,7 +1206,7 @@
             div.style.justifyContent = 'space-between';
             div.style.alignItems = 'center';
             div.style.borderBottom = '1px solid #f5f5f5';
-            div.style.paddingBottom = '6px';
+            div.style.padding = '8px 0';
 
             const doc = item.docId ? STATE.docs.find(d => d.id === item.docId) : null;
             const category = doc ? getTypeCategory(doc.type) : '';
@@ -1189,21 +1216,37 @@
 
             const textSpan = document.createElement('span');
             textSpan.style.flex = '1';
-            textSpan.innerText = `[ ${item.text}${meta ? ` (${meta})` : ''} ] - ${time}`;
+            textSpan.style.fontSize = '13px';
+            textSpan.innerText = `${item.text}${meta ? ` (${meta})` : ''} - ${time}`;
             div.appendChild(textSpan);
+
+            const btnGroup = document.createElement('div');
+            btnGroup.style.display = 'flex';
+            btnGroup.style.gap = '8px';
 
             if (item.docId) {
                 const openBtn = document.createElement('a');
                 openBtn.href = '#';
-                openBtn.style.cssText = 'color:#1d39c4; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:12px; background:#f0f5ff; padding:3px 8px; border-radius:4px; border:1px solid #adc6ff;';
+                openBtn.style.cssText = 'color:#1d39c4; font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; background:#f0f5ff; padding:3px 8px; border-radius:4px; border:1px solid #adc6ff;';
                 openBtn.innerText = '📄 打开文件';
                 openBtn.onclick = (e) => {
                     e.preventDefault();
                     viewFile(item.uploader || '', item.fileName || '', item.visibility, item.docId);
                 };
-                div.appendChild(openBtn);
+                btnGroup.appendChild(openBtn);
             }
 
+            const delBtn = document.createElement('a');
+            delBtn.href = '#';
+            delBtn.style.cssText = 'color:#ff4d4f; font-size:12px; text-decoration:none; white-space:nowrap; padding:3px 8px;';
+            delBtn.innerText = '删除';
+            delBtn.onclick = (e) => {
+                e.preventDefault();
+                deleteActivity(item.id);
+            };
+            btnGroup.appendChild(delBtn);
+
+            div.appendChild(btnGroup);
             container.appendChild(div);
         });
     }
@@ -1531,6 +1574,15 @@
         <label>标签 (逗号分隔)</label>
         <input type="text" id="ledgerEditTags" placeholder="例如：紧急, 待补录">
         
+        <label>可见性权限 (Visibility)</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666; margin-top: 5px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="all"> 所有人可见</label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="项目管理"> 项目管理</label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="业务部"> 业务部</label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="仓储部"> 仓储部</label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="财务部"> 财务部</label>
+        </div>
+
         <div id="ledgerAuditBlock">
             <label>审核结果</label>
             <select id="ledgerEditAudit">
