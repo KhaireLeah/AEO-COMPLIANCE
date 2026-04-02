@@ -484,8 +484,7 @@
         }
 
         const PROJECTS = [
-            { id: 'HCVAC', name: 'HCVAC 镀膜机出口项目', sub: '出口合规 · 物流协同 · 海关申报' },
-            { id: 'NAURA', name: 'NAURA 零件进口项目', sub: '进口合规 · 保税仓储 · 供应链计划' }
+            { id: '项目01', name: '项目01', sub: '当前进行中', enabled: true }
         ];
 
         const TABS = [
@@ -495,7 +494,13 @@
             { key: 'pm', label: '项目管理 (PM)', dept: '项目管理', url: 'xiangmu.html', code: 'gl01' }
         ];
 
-        let currentProjectId = sessionStorage.getItem('currentProjectId') || PROJECTS[0].id;
+        function normalizeProjectId(pid) {
+            if (!pid) return PROJECTS[0].id;
+            if (pid === 'HCVAC' || pid === 'NAURA') return PROJECTS[0].id;
+            return pid;
+        }
+
+        let currentProjectId = normalizeProjectId(sessionStorage.getItem('currentProjectId')) || PROJECTS[0].id;
         let activeTabKey = sessionStorage.getItem('activeTabKey') || TABS[0].key;
         let pendingTabKey = null;
 
@@ -517,6 +522,7 @@
             PROJECTS.forEach(p => {
                 const div = document.createElement('div');
                 div.className = 'project-item' + (p.id === currentProjectId ? ' active' : '');
+                if (!p.enabled) div.style.opacity = '0.55';
                 div.onclick = () => setProject(p.id);
                 div.innerHTML = `<div class="project-name">${p.name}</div><div class="project-sub">${p.sub}</div>`;
                 root.appendChild(div);
@@ -524,6 +530,8 @@
         }
 
         function setProject(projectId) {
+            const p = PROJECTS.find(x => x.id === projectId);
+            if (p && p.enabled === false) return;
             currentProjectId = projectId;
             sessionStorage.setItem('currentProjectId', currentProjectId);
             renderProjects();

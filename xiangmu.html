@@ -178,6 +178,66 @@
     color: rgba(0,0,0,0.85);
 }
 
+.ledger-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ledger-filters select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    outline: none;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.pill-ok { background: rgba(82,196,26,0.12); color: #389e0d; }
+.pill-warn { background: rgba(250,140,22,0.12); color: #d46b08; }
+.pill-bad { background: rgba(255,77,79,0.12); color: #cf1322; }
+
+.activity-panels details {
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.activity-panels summary {
+    padding: 12px 14px;
+    cursor: pointer;
+    font-weight: 700;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: #f8fbff;
+}
+
+.activity-panels summary::-webkit-details-marker { display: none; }
+
+.panel-body {
+    padding: 10px 14px;
+}
+
+.panel-empty {
+    color: rgba(0,0,0,0.45);
+    font-size: 13px;
+    padding: 6px 0;
+}
+
 .activities-section {
     background: white;
     border-radius: 8px;
@@ -309,10 +369,16 @@
 
     const CURRENT_USER = "项目经理D";
     const IS_ADMIN = true;
-    const DEFAULT_PROJECT_ID = 'HCVAC';
+    const DEFAULT_PROJECT_ID = '项目01';
+
+    function normalizeProjectId(pid) {
+        if (!pid) return DEFAULT_PROJECT_ID;
+        if (pid === 'HCVAC' || pid === 'NAURA') return DEFAULT_PROJECT_ID;
+        return pid;
+    }
 
     function getCurrentProjectId() {
-        return sessionStorage.getItem('currentProjectId') || DEFAULT_PROJECT_ID;
+        return normalizeProjectId(sessionStorage.getItem('currentProjectId'));
     }
 
     function updateTime() {
@@ -407,8 +473,7 @@
     async function deleteDoc(docId) {
         if (confirm('确定要删除该单据吗？此操作不可逆！')) {
             try {
-                const docs = await getDocs();
-                const docToDelete = docs.find(d => d.id === docId);
+                const docToDelete = await getDoc(docId);
 
                 await deleteDocAPI(docId);
 
@@ -417,13 +482,13 @@
                     fileName: docToDelete ? docToDelete.name : '',
                     uploader: CURRENT_USER,
                     visibility: 'all',
-                    projectId: (docToDelete && docToDelete.projectId) ? docToDelete.projectId : getCurrentProjectId()
+                    projectId: (docToDelete && docToDelete.projectId) ? normalizeProjectId(docToDelete.projectId) : getCurrentProjectId(),
+                    docId: docId
                 };
                 await addActivity(activity);
 
                 alert('单据已删除！');
-                loadAllDocs();
-                loadActivities();
+                refreshData();
             } catch (error) {
                 console.error('Error deleting doc:', error);
                 alert('删除失败，请检查网络连接。');
@@ -431,134 +496,201 @@
         }
     }
 
-    async function auditDoc(docId, action) {
-        try {
-            const docs = await getDocs();
-            const doc = docs.find(d => d.id === docId);
-            if (!doc) return;
+    const STATE = {
+        docs: [],
+        activities: [],
+        lastActivityByDocId: {}
+    };
 
-            const statusText = action === 'pass' ? 'passed' : 'rejected';
-            const actionLabel = action === 'pass' ? '通过了' : '退回了';
-
-            // Optimistically update the UI
-            doc.status = statusText;
-            renderDocs(docs); 
-
-            await updateDoc(docId, { ...doc, status: statusText });
-
-            var activity = {
-                text: `${CURRENT_USER} ${actionLabel} 单据 ${doc.name} [来自: ${doc.dept}]`,
-                fileName: doc.name,
-                uploader: CURRENT_USER,
-                visibility: 'all', 
-                docId: docId,
-                projectId: doc.projectId || getCurrentProjectId()
-            };
-            await addActivity(activity);
-
-            alert(`操作成功：单据已${actionLabel}`);
-            // Refresh data from server to be sure
-            loadAllDocs();
-            loadActivities();
-
-        } catch (error) {
-            console.error('Audit failed:', error);
-            alert('审核操作失败，请检查网络连接。');
-            loadAllDocs(); // Revert optimistic update on failure
-        }
+    function getDeptDisplay(dept) {
+        if (dept === '业务部') return '单证部';
+        if (dept === '仓储部') return '物流部';
+        if (dept === '财务部') return '商务部';
+        return dept || '-';
     }
 
-    async function loadAllDocs() {
-        try {
-            const docs = await getDocs();
-            const projectId = getCurrentProjectId();
-            const filteredDocs = docs.filter(d => (d.projectId || DEFAULT_PROJECT_ID) === projectId);
-            document.getElementById('totalCount').innerText = `[ ${filteredDocs.length} ]`;
-            renderDocs(filteredDocs);
-        } catch (error) {
-            console.error('Failed to load documents:', error);
-            document.getElementById('totalCount').innerText = '[ N/A ]';
-            ['ywDocsBody', 'ccDocsBody', 'cwDocsBody'].forEach(id => {
-                const tbody = document.getElementById(id);
-                if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">加载列表失败...</td></tr>';
-            });
-        }
+    function getTypeCategory(type) {
+        const t = String(type || '');
+        if (t.includes('合同') || t.includes('协议')) return '合同与协议';
+        if (t.includes('装箱') || t.includes('提单') || t.includes('物流') || t.includes('入库') || t.includes('出库') || t.includes('库存')) return '物流与仓储';
+        if (t.includes('报关') || t.includes('申报') || t.includes('海关') || t.includes('回执') || t.includes('通关')) return '报关与申报';
+        if (t.includes('发票') || t.includes('付款') || t.includes('结算') || t.includes('汇款')) return '财务与结算';
+        if (t.includes('资质') || t.includes('认证') || t.includes('AEO') || t.includes('许可证')) return '资质与合规';
+        return '其他';
     }
-    
-    function renderDocs(docs) {
-        const depts = {
-            '业务部': 'ywDocsBody',
-            '仓储部': 'ccDocsBody',
-            '财务部': 'cwDocsBody'
-        };
 
-        // Clear all tables first
-        Object.values(depts).forEach(tbodyId => {
-            document.getElementById(tbodyId).innerHTML = '';
+    function getAuditState(doc) {
+        const status = doc && doc.status;
+        return status && status !== 'pending' ? 'audited' : 'unaudited';
+    }
+
+    function getAuditDisplay(doc) {
+        const audited = getAuditState(doc) === 'audited';
+        return audited ? '<span class="status-pill pill-ok">已审核</span>' : '<span class="status-pill pill-warn">未审核</span>';
+    }
+
+    function getProcessDisplay(doc) {
+        const status = doc && doc.status;
+        if (status === 'passed') return '<span class="status-pill pill-ok">已通过</span>';
+        if (status === 'rejected') return '<span class="status-pill pill-bad">被退回</span>';
+        return '<span class="status-pill pill-warn">待审核</span>';
+    }
+
+    function formatProjectId(pid) {
+        return normalizeProjectId(pid);
+    }
+
+    function initTypeFilter() {
+        const select = document.getElementById('filterType');
+        if (!select) return;
+        const categories = Array.from(new Set(STATE.docs.map(d => getTypeCategory(d.type)))).sort();
+        select.innerHTML = '<option value="all">全部分类</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function getLedgerFilters() {
+        const dept = (document.getElementById('filterDept') || {}).value || 'all';
+        const audit = (document.getElementById('filterAudit') || {}).value || 'all';
+        const type = (document.getElementById('filterType') || {}).value || 'all';
+        return { dept, audit, type };
+    }
+
+    function renderLedger() {
+        const tbody = document.getElementById('ledgerBody');
+        if (!tbody) return;
+
+        const { dept, audit, type } = getLedgerFilters();
+
+        const rows = STATE.docs.filter(d => {
+            if (dept !== 'all' && d.dept !== dept) return false;
+            if (audit !== 'all' && getAuditState(d) !== audit) return false;
+            if (type !== 'all' && getTypeCategory(d.type) !== type) return false;
+            return true;
         });
 
-        // Populate tables
-        docs.forEach(doc => {
-            const tbodyId = depts[doc.dept];
-            if (!tbodyId) return; // Skip if doc belongs to an unknown dept
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">暂无单证</td></tr>';
+            return;
+        }
 
-            const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = '';
+        rows.forEach(doc => {
             const tr = document.createElement('tr');
+            const category = getTypeCategory(doc.type);
+            const last = doc.id ? STATE.lastActivityByDocId[doc.id] : null;
+            const lastText = last && last.text ? String(last.text) : '';
+            const lastTime = last && last.createdAt ? new Date(last.createdAt).toLocaleString() : '';
+            const lastLine = lastText ? `<div style="font-size:12px;color:rgba(0,0,0,0.45);margin-top:4px;">最新：${lastText}${lastTime ? ` · ${lastTime}` : ''}</div>` : '';
 
-            let statusDisplay = '';
-            if (doc.status === 'pending') statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
-            else if (doc.status === 'passed') statusDisplay = '<span style="color: #52c41a;">已通过</span>';
-            else if (doc.status === 'rejected') statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
-
-            let auditActions = '';
-            if (doc.status === 'pending') {
-                auditActions = ` | <a href="#" style="color:#52c41a; text-decoration:none;" onclick="auditDoc('${doc.id}', 'pass')">通过</a> | 
-                               <a href="#" style="color:#fa8c16; text-decoration:none;" onclick="auditDoc('${doc.id}', 'reject')">退回</a>`;
-            }
-
-            tr.innerHTML = `<td>[ ${doc.id} ]</td>
-                            <td>[ ${doc.type} ]</td>
-                            <td>${statusDisplay}</td>
-                            <td>[ ${doc.applicant} ]</td>
-                            <td>[ ${new Date(doc.createdAt).toLocaleString()} ]</td>
-                            <td>
-                                <a href="#" style="color:#1890ff; text-decoration:none;" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
-                                ${auditActions} | 
-                                <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}')">删除</a>
-                            </td>`;
+            tr.innerHTML = `
+                <td>[ ${formatProjectId(doc.projectId)} ]</td>
+                <td>[ ${category} / ${doc.type || '-'} ]</td>
+                <td>${getAuditDisplay(doc)}</td>
+                <td>${getProcessDisplay(doc)}${lastLine}</td>
+                <td>[ ${getDeptDisplay(doc.dept)} ]</td>
+                <td>[ ${doc.applicant || '-'} ]</td>
+                <td>[ ${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'} ]</td>
+                <td>
+                    <a href="#" style="color:#1890ff; text-decoration:none;" onclick="viewFile('${doc.applicant || ''}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
+                    | <a href="#" style="color:#ff4d4f; text-decoration:none;" onclick="deleteDoc('${doc.id}')">删除</a>
+                </td>
+            `;
             tbody.appendChild(tr);
         });
+    }
 
-        // Add placeholder if any table is empty
-        Object.entries(depts).forEach(([deptName, tbodyId]) => {
-            const tbody = document.getElementById(tbodyId);
-            if (tbody.children.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#999;">暂无来自 ${deptName} 的单据</td></tr>`;
+    function classifyActivity(item) {
+        const text = String((item && item.text) || '');
+        if (text.includes('删除') || text.includes('作废')) return 'delete';
+        if (text.includes('通过') || text.includes('退回') || text.includes('审核')) return 'audit';
+        if (text.includes('上传') || text.includes('重新上传') || text.includes('更新') || text.includes('录入')) return 'upload';
+        return 'other';
+    }
+
+    function renderActivityPanel(panelId, items) {
+        const container = document.getElementById(panelId);
+        if (!container) return;
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="panel-empty">暂无</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        items.slice(0, 20).forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'activity-item';
+            const doc = item.docId ? STATE.docs.find(d => d.id === item.docId) : null;
+            const category = doc ? getTypeCategory(doc.type) : '';
+            const dept = doc ? getDeptDisplay(doc.dept) : '';
+            const meta = [category, dept].filter(Boolean).join(' · ');
+            const time = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
+            div.innerText = `[ ${item.text}${meta ? ` (${meta})` : ''} ] - ${time}`;
+            if (item.docId) {
+                div.onclick = () => viewFile(item.uploader || '', item.fileName || '', item.visibility, item.docId);
+                div.style.cursor = 'pointer';
             }
+            container.appendChild(div);
         });
     }
 
-    async function loadActivities() {
+    function renderActivityPanels() {
+        const upload = [];
+        const audit = [];
+        const del = [];
+        const other = [];
+
+        STATE.activities.forEach(item => {
+            const c = classifyActivity(item);
+            if (c === 'upload') upload.push(item);
+            else if (c === 'audit') audit.push(item);
+            else if (c === 'delete') del.push(item);
+            else other.push(item);
+        });
+
+        const setCount = (id, n) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = `[ ${n} ]`;
+        };
+
+        setCount('countUpload', upload.length);
+        setCount('countAudit', audit.length);
+        setCount('countDelete', del.length);
+        setCount('countOther', other.length);
+
+        renderActivityPanel('actUpload', upload);
+        renderActivityPanel('actAudit', audit);
+        renderActivityPanel('actDelete', del);
+        renderActivityPanel('actOther', other);
+    }
+
+    function buildLastActivityIndex() {
+        const index = {};
+        STATE.activities.forEach(item => {
+            if (!item.docId) return;
+            if (!index[item.docId]) index[item.docId] = item;
+        });
+        STATE.lastActivityByDocId = index;
+    }
+
+    async function refreshData() {
         try {
-            const activities = await getActivities();
-            const container = document.getElementById('activitiesBody');
-            container.innerHTML = '';
             const projectId = getCurrentProjectId();
-            activities.slice(0, 15).forEach(item => {
-                const itemProjectId = item.projectId || DEFAULT_PROJECT_ID;
-                if (itemProjectId !== projectId) return;
-                const div = document.createElement('div');
-                div.className = 'activity-item';
-                div.innerText = `[ ${item.text} ] - ${new Date(item.createdAt).toLocaleString()}`;
-                if (item.docId) {
-                    div.onclick = () => viewFile(item.uploader, item.fileName, item.visibility, item.docId);
-                    div.style.cursor = 'pointer';
-                }
-                container.appendChild(div);
-            });
+            const [docsAll, actsAll] = await Promise.all([getDocs(), getActivities()]);
+            const docs = (docsAll || []).filter(d => normalizeProjectId(d.projectId) === projectId);
+            const acts = (actsAll || []).filter(a => normalizeProjectId(a.projectId) === projectId);
+
+            STATE.docs = docs;
+            STATE.activities = acts;
+            buildLastActivityIndex();
+
+            document.getElementById('totalCount').innerText = `[ ${docs.length} ]`;
+            initTypeFilter();
+            renderLedger();
+            renderActivityPanels();
         } catch (error) {
-            console.error('Failed to load activities:', error);
-            document.getElementById('activitiesBody').innerHTML = '<div style="color: red;">加载全域动态失败...</div>';
+            console.error('Failed to refresh data:', error);
+            document.getElementById('totalCount').innerText = '[ N/A ]';
+            const tbody = document.getElementById('ledgerBody');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
         }
     }
 
@@ -574,8 +706,14 @@
             }
         });
 
-        loadAllDocs();
-        loadActivities();
+        const filterDept = document.getElementById('filterDept');
+        const filterAudit = document.getElementById('filterAudit');
+        const filterType = document.getElementById('filterType');
+        if (filterDept) filterDept.addEventListener('change', renderLedger);
+        if (filterAudit) filterAudit.addEventListener('change', renderLedger);
+        if (filterType) filterType.addEventListener('change', renderLedger);
+
+        refreshData();
 
         document.addEventListener('click', e => {
             const userAvatar = document.querySelector('.user-avatar');
@@ -586,8 +724,7 @@
 
         // Set a poller to refresh data periodically
         setInterval(() => {
-            loadAllDocs();
-            loadActivities();
+            refreshData();
         }, 15000); // Refresh more frequently for admin
     }
 </script>
@@ -652,56 +789,59 @@
             </div>
 
             <div class="doc-section">
-                <div class="dept-header">业务部单据</div>
+                <div class="dept-header">单证台账</div>
+                <div class="ledger-filters">
+                    <select id="filterDept">
+                        <option value="all">全部部门</option>
+                        <option value="业务部">单证部</option>
+                        <option value="仓储部">物流部</option>
+                        <option value="财务部">商务部</option>
+                    </select>
+                    <select id="filterAudit">
+                        <option value="all">全部状态</option>
+                        <option value="audited">已审核</option>
+                        <option value="unaudited">未审核</option>
+                    </select>
+                    <select id="filterType">
+                        <option value="all">全部分类</option>
+                    </select>
+                </div>
                 <table class="doc-table">
                     <thead>
                         <tr>
-                            <th>项目ID</th>
+                            <th>项目</th>
                             <th>单证类型</th>
-                            <th>状态</th>
+                            <th>审核</th>
+                            <th>流程状态</th>
+                            <th>归属部门</th>
                             <th>上传人</th>
                             <th>时间</th>
                             <th>操作</th>
                         </tr>
                     </thead>
-                    <tbody id="ywDocsBody"></tbody>
-                </table>
-
-                <div class="dept-header" style="color: #fa8c16; border-color: #fa8c16;">仓储部单据</div>
-                <table class="doc-table">
-                    <thead>
-                        <tr>
-                            <th>项目ID</th>
-                            <th>单据类型</th>
-                            <th>状态</th>
-                            <th>上传人</th>
-                            <th>时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ccDocsBody"></tbody>
-                </table>
-
-                <div class="dept-header" style="color: #52c41a; border-color: #52c41a;">财务部单据</div>
-                <table class="doc-table">
-                    <thead>
-                        <tr>
-                            <th>项目ID</th>
-                            <th>单据类型</th>
-                            <th>状态</th>
-                            <th>上传人</th>
-                            <th>时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cwDocsBody"></tbody>
+                    <tbody id="ledgerBody"></tbody>
                 </table>
             </div>
 
             <div class="activities-section">
-                <div class="activities-title">系统全域动态</div>
-                <div id="activitiesBody">
-                    <!-- 由 JS 填充 -->
+                <div class="activities-title">单证动态</div>
+                <div class="activity-panels" id="activityPanels">
+                    <details open>
+                        <summary>上传 / 更新 <span id="countUpload">[ 0 ]</span></summary>
+                        <div class="panel-body" id="actUpload"></div>
+                    </details>
+                    <details>
+                        <summary>审核状态 <span id="countAudit">[ 0 ]</span></summary>
+                        <div class="panel-body" id="actAudit"></div>
+                    </details>
+                    <details>
+                        <summary>删除 / 作废 <span id="countDelete">[ 0 ]</span></summary>
+                        <div class="panel-body" id="actDelete"></div>
+                    </details>
+                    <details>
+                        <summary>其他 <span id="countOther">[ 0 ]</span></summary>
+                        <div class="panel-body" id="actOther"></div>
+                    </details>
                 </div>
             </div>
         </div>

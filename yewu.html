@@ -375,10 +375,16 @@
 
     const CURRENT_USER = "单证员A";
     const IS_ADMIN = (authorizedDept === '项目管理');
-    const DEFAULT_PROJECT_ID = 'HCVAC';
+    const DEFAULT_PROJECT_ID = '项目01';
+
+    function normalizeProjectId(pid) {
+        if (!pid) return DEFAULT_PROJECT_ID;
+        if (pid === 'HCVAC' || pid === 'NAURA') return DEFAULT_PROJECT_ID;
+        return pid;
+    }
 
     function getCurrentProjectId() {
-        return sessionStorage.getItem('currentProjectId') || DEFAULT_PROJECT_ID;
+        return normalizeProjectId(sessionStorage.getItem('currentProjectId'));
     }
 
     function updateTime() {
@@ -556,7 +562,7 @@
                     if (oldDoc) {
                         const updatedDoc = {
                             ...oldDoc,
-                            projectId: oldDoc.projectId || projectId,
+                            projectId: normalizeProjectId(oldDoc.projectId) || projectId,
                             name: file.name,
                             type: docType,
                             fileExt: file.name.split('.').pop().toUpperCase(),
@@ -738,7 +744,7 @@
 
             pendingTable.innerHTML = '';
             docs.forEach(function(doc) {
-                const docProjectId = doc.projectId || DEFAULT_PROJECT_ID;
+                const docProjectId = normalizeProjectId(doc.projectId);
                 if (docProjectId !== projectId) return;
                 var canSee = false;
                 if (IS_ADMIN || doc.applicant === CURRENT_USER) canSee = true;
@@ -793,7 +799,7 @@
             var container = document.getElementById('activitiesBody');
             container.innerHTML = '';
             activities.slice(0, 10).forEach(function(item) { // Show more activities
-                const itemProjectId = item.projectId || DEFAULT_PROJECT_ID;
+                const itemProjectId = normalizeProjectId(item.projectId);
                 if (itemProjectId !== projectId) return;
                 var canSee = false;
                 if (IS_ADMIN || item.uploader === CURRENT_USER) canSee = true;
