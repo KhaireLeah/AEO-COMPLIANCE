@@ -763,7 +763,6 @@
     }
 
     function beginEditProjectName() {
-        if (!IS_ADMIN) return;
         const editor = document.getElementById('pmProjectNameEditor');
         const input = document.getElementById('pmProjectNameInput');
         if (!editor || !input) return;
@@ -781,7 +780,6 @@
     }
 
     function confirmEditProjectName() {
-        if (!IS_ADMIN) return;
         const pid = getCurrentProjectId();
         const input = document.getElementById('pmProjectNameInput');
         const next = input ? String(input.value || '').trim() : '';
@@ -1920,7 +1918,7 @@
 
         const editBtn = document.getElementById('pmEditProjectNameBtn');
         if (editBtn) {
-            editBtn.style.display = IS_ADMIN ? '' : 'none';
+            editBtn.style.display = '';
             editBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 beginEditProjectName();

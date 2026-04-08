@@ -678,6 +678,8 @@
         const name = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(pid) : pid;
         const el = document.getElementById('deptProjectName');
         if (el) el.textContent = name || pid || '';
+        const cardEl = document.getElementById('currentProjectCardName');
+        if (cardEl) cardEl.textContent = name || pid || '';
     }
 
     function updateTime() {
@@ -1743,7 +1745,7 @@
             <div class="stats-cards">
                 <div class="card blue">
                     <div class="card-title">当前业务项目</div>
-                    <div class="card-value">[ 财务审计 C003 ]</div>
+                    <div class="card-value">[ <span id="currentProjectCardName"></span> ]</div>
                     <div style="font-size: 12px; margin-top: 8px;">[ 报销审核中 ]</div>
                 </div>
                 <div class="card yellow">

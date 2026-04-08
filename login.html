@@ -463,7 +463,8 @@
         <div class="modal" role="dialog" aria-modal="true">
             <h3 id="authTitle">身份验证</h3>
             <p id="authDesc">请输入代码以继续</p>
-            <input type="text" id="authInput" placeholder="请输入项目编码/合同号">
+            <input type="text" id="authSearch" placeholder="请输入项目编码/合同号" style="margin-bottom:10px;">
+            <input type="password" id="authInput" placeholder="验证代码">
             <div class="modal-actions">
                 <button class="btn" onclick="closeAuth()">取消</button>
                 <button class="btn btn-primary" onclick="submitAuth()">验证</button>
@@ -688,7 +689,9 @@
             document.getElementById('authTitle').textContent = `验证进入：${tab.label}`;
             document.getElementById('authDesc').textContent = `请输入项目编码/合同号（示例：${tab.code}）`;
             const mask = document.getElementById('authMask');
+            const search = document.getElementById('authSearch');
             const input = document.getElementById('authInput');
+            if (search) search.value = '';
             input.value = '';
             mask.style.display = 'flex';
             setTimeout(() => input.focus(), 0);
