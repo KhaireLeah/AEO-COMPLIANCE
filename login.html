@@ -463,7 +463,7 @@
         <div class="modal" role="dialog" aria-modal="true">
             <h3 id="authTitle">身份验证</h3>
             <p id="authDesc">请输入代码以继续</p>
-            <input type="password" id="authInput" placeholder="验证代码">
+            <input type="text" id="authInput" placeholder="请输入项目编码/合同号">
             <div class="modal-actions">
                 <button class="btn" onclick="closeAuth()">取消</button>
                 <button class="btn btn-primary" onclick="submitAuth()">验证</button>
@@ -548,7 +548,8 @@
                 div.className = 'project-item' + (p.id === currentProjectId ? ' active' : '');
                 if (!p.enabled) div.style.opacity = '0.55';
                 div.onclick = () => setProject(p.id);
-                div.innerHTML = `<div class="project-name">${p.name}</div><div class="project-sub">${p.sub}</div>`;
+                const displayName = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(p.id) : p.name;
+                div.innerHTML = `<div class="project-name">${displayName || p.name}</div><div class="project-sub">${p.sub}</div>`;
                 root.appendChild(div);
             });
         }
@@ -685,7 +686,7 @@
         function openAuth() {
             const tab = TABS.find(t => t.key === pendingTabKey) || TABS[0];
             document.getElementById('authTitle').textContent = `验证进入：${tab.label}`;
-            document.getElementById('authDesc').textContent = `请输入对应代码（示例：${tab.code}）`;
+            document.getElementById('authDesc').textContent = `请输入项目编码/合同号（示例：${tab.code}）`;
             const mask = document.getElementById('authMask');
             const input = document.getElementById('authInput');
             input.value = '';
@@ -730,6 +731,7 @@
             document.getElementById("memoInput").value = localStorage.getItem("userMemo") || "";
             window.addEventListener('storage', (e) => {
                 if (e.key === 'userMemo') document.getElementById("memoInput").value = e.newValue || "";
+                if (e.key === 'bpmProjectNames' || e.key === 'bpmSyncTick') renderProjects();
             });
 
             if (!sessionStorage.getItem('currentProjectId')) {

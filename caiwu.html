@@ -673,6 +673,13 @@
         return norm;
     }
 
+    function updateProjectNameUI() {
+        const pid = getCurrentProjectId();
+        const name = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(pid) : pid;
+        const el = document.getElementById('deptProjectName');
+        if (el) el.textContent = name || pid || '';
+    }
+
     function updateTime() {
         var now = new Date();
         var timeStr = now.getFullYear() + "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-" + now.getDate().toString().padStart(2, '0') + " " + now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0');
@@ -1644,10 +1651,14 @@
                 if (document.hidden) return;
                 refreshData();
             }
+            if (e.key === 'bpmProjectNames') {
+                updateProjectNameUI();
+            }
         });
 
         const userNameEl = document.querySelector('.user-name');
         if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
+        updateProjectNameUI();
 
         refreshData();
 
@@ -1724,7 +1735,7 @@
     </div>
     <div class="main-content">
         <div class="top-banner">
-            [ 财务部 - 财务报销 ]
+            [ <span id="deptProjectName"></span> · 财务部 - 财务报销 ]
             <a href="login.html" class="switch-link">切换至其他业务... ▾</a>
         </div>
         

@@ -251,6 +251,32 @@ function safeJsonParse(text, fallback) {
     }
 }
 
+function loadProjectNames() {
+    return safeJsonParse(localStorage.getItem('bpmProjectNames') || '', {}) || {};
+}
+
+function getProjectDisplayName(projectId) {
+    const pid = (projectId == null) ? '' : String(projectId).trim();
+    if (!pid) return '';
+    const map = loadProjectNames();
+    const v = map && map[pid] ? String(map[pid]).trim() : '';
+    return v || pid;
+}
+
+function setProjectDisplayName(projectId, name) {
+    const pid = (projectId == null) ? '' : String(projectId).trim();
+    if (!pid) return;
+    const next = String(name || '').trim();
+    const map = loadProjectNames();
+    if (!next) {
+        delete map[pid];
+    } else {
+        map[pid] = next;
+    }
+    localStorage.setItem('bpmProjectNames', JSON.stringify(map));
+    emitSyncTick();
+}
+
 function getPmUserName() {
     const v = localStorage.getItem('bpmPmUserName');
     return (v && String(v).trim()) ? String(v).trim() : '项目经理D';
