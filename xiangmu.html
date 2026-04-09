@@ -222,6 +222,24 @@
     text-decoration: underline;
 }
 
+.top-banner .pm-edit-btn {
+    font-size: 16px;
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.08);
+    line-height: 1;
+}
+
+.top-banner .pm-edit-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.14);
+}
+
 .content-inner {
     padding: 24px;
 }
@@ -2024,7 +2042,7 @@
         <div class="top-banner">
             <span style="display:flex; align-items:center; gap:10px;">
                 <span>[ <span id="pmProjectName"></span> ]</span>
-                <a href="#" id="pmEditProjectNameBtn" class="switch-link" style="padding:2px 8px;">✎</a>
+                <a href="#" id="pmEditProjectNameBtn" class="pm-edit-btn">✎</a>
                 <span id="pmProjectNameEditor" style="display:none; align-items:center; gap:8px;">
                     <input id="pmProjectNameInput" style="height:28px; border:1px solid #d9d9d9; border-radius:8px; padding:0 10px; width:220px;" placeholder="输入项目名称">
                     <button class="btn btn-primary" style="height:28px; padding:0 10px; font-size:12px;" id="pmProjectNameOk">确定</button>
