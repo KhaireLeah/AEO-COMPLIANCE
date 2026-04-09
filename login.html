@@ -629,8 +629,9 @@
 
         function renderWorkspace() {
             const project = getProjectById(currentProjectId);
-            document.getElementById('workspaceH1').textContent = project.name;
-            document.getElementById('workspaceSub').textContent = `当前项目：${project.id} · 点击部门标签进行验证并展开面板`;
+            const displayName = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(project.id) : project.name;
+            document.getElementById('workspaceH1').textContent = displayName || project.name;
+            document.getElementById('workspaceSub').textContent = `当前项目：${displayName || project.id} · 点击部门标签进行验证并展开面板`;
 
             const tab = TABS.find(t => t.key === activeTabKey) || TABS[0];
             const unlocked = isUnlocked(activeTabKey);
@@ -732,7 +733,10 @@
             document.getElementById("memoInput").value = localStorage.getItem("userMemo") || "";
             window.addEventListener('storage', (e) => {
                 if (e.key === 'userMemo') document.getElementById("memoInput").value = e.newValue || "";
-                if (e.key === 'bpmProjectNames' || e.key === 'bpmSyncTick') renderProjects();
+                if (e.key === 'bpmProjectNames' || e.key === 'bpmSyncTick') {
+                    renderProjects();
+                    renderWorkspace();
+                }
             });
 
             if (!sessionStorage.getItem('currentProjectId')) {
