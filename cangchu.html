@@ -1250,9 +1250,9 @@
     }
 
     function getDeptDisplay(dept) {
-        if (dept === '业务部') return '单证部';
-        if (dept === '仓储部') return '物流部';
-        if (dept === '财务部') return '商务部';
+        if (dept === '业务部') return '单证管理';
+        if (dept === '仓储部') return '仓储管理';
+        if (dept === '财务部') return '供应链管理';
         return dept || '-';
     }
 
@@ -1709,19 +1709,19 @@
         <div class="menu-item" onclick="window.location.href='yewu.html'">
             <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
             <div class="menu-item-text">
-                <h4>业务部</h4>
+                <h4>单证管理</h4>
             </div>
         </div>
         <div class="menu-item active" onclick="window.location.href='cangchu.html'">
             <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMjEuOCA4LjdsLTEuNC0xLjVMNy43IDQuNCA2LjMgNS44bDEyLjUgMTEuMmwzLjEtMy4xYy42LS42LjYtMS41IDAtMi4xek0xNy41IDEuOWwtMS40IDEuNEwzLjggMTUuOGwtMS40IDEuNGMtLjYtLjYtMS41LS42LTIuMSAwcy0uNiAxLjUgMCAyLjFsMy41IDMuNWMyLjIgMi4yIDUuOCAyLjIgOCAwTDIxLjggOC43Yy42LS42LjYtMS41IDAtMi4xek0xNiAxMy4ybDEuNCAxLjRMMTAuMiAyMWwtMS40LTEuNEwxNiAxMy4yeiIvPjwvc3ZnPg==" alt="" class="menu-item-icon">
             <div class="menu-item-text">
-                <h4>仓储部</h4>
+                <h4>仓储管理</h4>
             </div>
         </div>
         <div class="menu-item" onclick="window.location.href='caiwu.html'">
             <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
             <div class="menu-item-text">
-                <h4>财务部</h4>
+                <h4>供应链管理</h4>
             </div>
         </div>
         <div class="menu-item" onclick="window.location.href='xiangmu.html'">
@@ -1737,7 +1737,7 @@
     </div>
     <div class="main-content">
         <div class="top-banner">
-            [ <span id="deptProjectName"></span> · 仓储部 - 仓储管理 ]
+            [ <span id="deptProjectName"></span> · 仓储管理 ]
             <a href="login.html" class="switch-link">切换至其他业务... ▾</a>
         </div>
         
@@ -1761,9 +1761,9 @@
                 <div class="ledger-filters">
                     <select id="filterDept" onchange="renderLedger()">
                         <option value="all">全部部门</option>
-                        <option value="业务部">单证部</option>
-                        <option value="仓储部">物流部</option>
-                        <option value="财务部">商务部</option>
+                        <option value="业务部">单证管理</option>
+                        <option value="仓储部">仓储管理</option>
+                        <option value="财务部">供应链管理</option>
                         <option value="项目管理">项目管理</option>
                     </select>
                     <select id="filterAudit" onchange="renderLedger()">
