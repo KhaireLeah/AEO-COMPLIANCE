@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单证入口 - 业务流程管理系统</title>
+    <style type="text/css">
+        :root {
+            --primary-color: #1890ff;
+            --bg-color: #f4f7f9;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --white: #ffffff;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--white);
+            padding: 0 28px;
+            height: 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: -0.3px;
+        }
+        .help-link {
+            text-decoration: none;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+        .help-link:hover { color: var(--primary-color); }
+        .page {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .card {
+            background: var(--white);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 520px;
+            padding: 28px;
+        }
+        .card h1 {
+            margin: 0 0 6px;
+            font-size: 20px;
+        }
+        .card p {
+            margin: 0 0 18px;
+            color: var(--text-sub);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .module {
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        .module-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .module-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: rgba(24,144,255,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .module-icon svg { width: 22px; height: 22px; }
+        .module-title {
+            font-size: 15px;
+            font-weight: 800;
+            margin: 0;
+        }
+        .module-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+        .btn {
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .btn-primary {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+        .btn:hover { opacity: 0.92; }
+        .meta-row {
+            margin-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--text-sub);
+            font-size: 12px;
+        }
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+            padding: 18px;
+        }
+        .modal h3 { margin: 0 0 6px; font-size: 16px; }
+        .modal p { margin: 0 0 12px; color: rgba(0,0,0,0.45); font-size: 12px; }
+        .modal input {
+            width: 100%;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid #d9d9d9;
+            padding: 0 12px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">BPM System</div>
+        <a href="index.html" class="help-link" onclick="sessionStorage.clear()">退出</a>
+    </header>
+
+    <div class="page">
+        <div class="card">
+            <h1 id="pTitle">项目01</h1>
+            <p>单证管理专用入口：仅包含单证模块，不包含搜索栏/实时钟/备忘录等功能。</p>
+
+            <div class="module">
+                <div class="module-left">
+                    <div class="module-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path fill="#1890ff" d="M7 2h8l4 4v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V7h3.5L14 3.5zM8 11h8v-2H8v2zm0 4h8v-2H8v2zm0 4h5v-2H8v2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="module-title">单证管理</div>
+                        <div class="module-sub">进入单证工作台（需第二层密钥）</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="enterBtn">进入</button>
+            </div>
+
+            <div class="meta-row">
+                <div>第二层密钥：项目单证</div>
+                <a class="help-link" href="news.html">帮助</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-mask" id="authMask">
+        <div class="modal" role="dialog" aria-modal="true">
+            <h3>身份验证</h3>
+            <p>请输入单证管理验证代码以继续</p>
+            <input type="password" id="authInput" placeholder="验证代码">
+            <div class="modal-actions">
+                <button class="btn" id="authCancel">取消</button>
+                <button class="btn btn-primary" id="authOk">验证</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="api.js"></script>
+    <script>
+        const DEFAULT_PROJECT_ID = '项目01';
+        const REQUIRED_DEPT = '业务部';
+        const REQUIRED_CODE = 'YW01';
+
+        function normalizeProjectId(pid) {
+            const raw = (pid == null) ? '' : String(pid).trim();
+            if (!raw) return DEFAULT_PROJECT_ID;
+            if (raw !== '项目01') return DEFAULT_PROJECT_ID;
+            return raw;
+        }
+
+        function getCurrentProjectId() {
+            const pid = sessionStorage.getItem('currentProjectId') || localStorage.getItem('bpmCurrentProjectId');
+            const norm = normalizeProjectId(pid);
+            if (norm) {
+                sessionStorage.setItem('currentProjectId', norm);
+                localStorage.setItem('bpmCurrentProjectId', norm);
+            }
+            return norm;
+        }
+
+        function updateProjectTitle() {
+            const pid = getCurrentProjectId();
+            const name = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(pid) : pid;
+            const title = name || pid || DEFAULT_PROJECT_ID;
+            document.getElementById('pTitle').textContent = title;
+        }
+
+        function openAuth() {
+            const mask = document.getElementById('authMask');
+            const input = document.getElementById('authInput');
+            if (mask) mask.style.display = 'flex';
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function closeAuth() {
+            const mask = document.getElementById('authMask');
+            if (mask) mask.style.display = 'none';
+        }
+
+        function submitAuth() {
+            const code = (document.getElementById('authInput') || {}).value || '';
+            if (String(code).trim() !== REQUIRED_CODE) {
+                alert('验证代码错误，请重试');
+                return;
+            }
+
+            sessionStorage.setItem('authorizedDept2', REQUIRED_DEPT);
+            localStorage.setItem('bpmAuthorizedDept2', REQUIRED_DEPT);
+            sessionStorage.setItem('userRole2', 'member');
+            localStorage.setItem('bpmRole2', 'member');
+            sessionStorage.setItem('currentUserName2', '单证员A');
+            localStorage.setItem('bpmCurrentUserName2', '单证员A');
+            window.location.href = 'yewu2.html';
+        }
+
+        window.onload = function() {
+            updateProjectTitle();
+
+            const enterBtn = document.getElementById('enterBtn');
+            if (enterBtn) enterBtn.addEventListener('click', () => openAuth());
+
+            const cancelBtn = document.getElementById('authCancel');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => closeAuth());
+
+            const okBtn = document.getElementById('authOk');
+            if (okBtn) okBtn.addEventListener('click', () => submitAuth());
+
+            const mask = document.getElementById('authMask');
+            if (mask) mask.addEventListener('click', (e) => {
+                if (e.target && e.target.id === 'authMask') closeAuth();
+            });
+
+            const input = document.getElementById('authInput');
+            if (input) input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') submitAuth();
+                if (e.key === 'Escape') closeAuth();
+            });
+        };
+    </script>
+</body>
+</html>

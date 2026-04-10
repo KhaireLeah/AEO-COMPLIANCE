@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单证管理 - 精简工作台</title>
+    <style>
+        body {
+            background-color: #f0f2f5;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+        }
+        .header {
+            background-color: #fff;
+            padding: 0 24px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 64px;
+        }
+        .logo { font-size: 20px; font-weight: 700; }
+        .right-menu { display: flex; align-items: center; gap: 16px; }
+        .btn-link {
+            text-decoration: none;
+            color: #1890ff;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 18px 18px 40px;
+        }
+        .top-banner {
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .top-banner .title {
+            font-weight: 800;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.06);
+            padding: 14px 16px;
+        }
+        .card-title { font-size: 12px; color: rgba(0,0,0,0.45); font-weight: 700; }
+        .card-value { font-size: 22px; font-weight: 900; margin-top: 6px; }
+        .section {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.06);
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .section h3 { margin: 0 0 10px; font-size: 16px; }
+        .hint { color: rgba(0,0,0,0.45); font-size: 12px; margin: 0 0 12px; }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        label { font-size: 12px; color: rgba(0,0,0,0.65); font-weight: 700; display: block; margin-bottom: 6px; }
+        input[type="text"], select, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #d9d9d9;
+            border-radius: 10px;
+            padding: 10px 12px;
+            outline: none;
+            font-size: 13px;
+            background: #fff;
+        }
+        textarea { min-height: 80px; resize: vertical; }
+        .btn {
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 800;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: #fff;
+            border-color: #1890ff;
+        }
+        .btn-danger {
+            background: #ff4d4f;
+            color: #fff;
+            border-color: #ff4d4f;
+        }
+        .actions { display: flex; gap: 10px; align-items: center; }
+        .vis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12px;
+            color: #666;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding: 10px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { color: rgba(0,0,0,0.65); font-size: 12px; }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            background: rgba(24,144,255,0.12);
+            color: #1890ff;
+        }
+        .muted { color: rgba(0,0,0,0.45); font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">BPM System</div>
+        <div class="right-menu">
+            <a class="btn-link" href="login2.html">返回入口</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="top-banner">
+            <div class="title">[ <span id="deptProjectName"></span> · 单证管理 ]</div>
+            <div class="muted" id="userTag"></div>
+        </div>
+
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">当前项目</div>
+                <div class="card-value">[ <span id="currentProjectCardName"></span> ]</div>
+            </div>
+            <div class="card">
+                <div class="card-title">单证数量</div>
+                <div class="card-value" id="docCount">0</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>单证上传</h3>
+            <p class="hint">仅对“单证管理”开放。上传后将出现在下方台账。</p>
+            <div class="row">
+                <div>
+                    <label>单据类型</label>
+                    <select id="docType">
+                        <option value="外贸合同">外贸合同</option>
+                        <option value="报关委托书">报关委托书</option>
+                        <option value="报关单">报关单</option>
+                        <option value="海关回执">海关回执</option>
+                        <option value="AEO资质">AEO资质</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label>标签（逗号分隔）</label>
+                    <input id="tagsInput" type="text" placeholder="例如：紧急, 待补录">
+                </div>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label>备注</label>
+                <textarea id="noteInput" placeholder="请输入备注..."></textarea>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label>可见权限</label>
+                <div class="vis-grid">
+                    <label style="display:flex; align-items:center; gap:6px; margin:0;"><input type="checkbox" class="vis-check" value="all"> 所有人可见</label>
+                    <label style="display:flex; align-items:center; gap:6px; margin:0;"><input type="checkbox" class="vis-check" value="内控管理"> 内控管理</label>
+                    <label style="display:flex; align-items:center; gap:6px; margin:0;"><input type="checkbox" class="vis-check" value="业务部" checked> 单证管理</label>
+                </div>
+            </div>
+
+            <div class="actions">
+                <input type="file" id="fileUpload">
+                <button class="btn btn-primary" id="uploadBtn">确认上传</button>
+                <span class="muted" id="uploadHint"></span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>单证台账</h3>
+            <p class="hint">只展示部门为“单证管理(业务部)”的记录。</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:100px;">项目</th>
+                        <th>类型</th>
+                        <th style="width:120px;">提交时间</th>
+                        <th style="width:160px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="ledgerBody">
+                    <tr><td colspan="4" class="muted">正在加载...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="api.js"></script>
+    <script>
+        const REQUIRED_DEPT = "业务部";
+        const authorizedDept2 = sessionStorage.getItem('authorizedDept2') || localStorage.getItem('bpmAuthorizedDept2');
+        if (authorizedDept2) sessionStorage.setItem('authorizedDept2', authorizedDept2);
+        if (!authorizedDept2 || authorizedDept2 !== REQUIRED_DEPT) {
+            alert('权限不足：请先通过单证入口验证。');
+            window.location.href = 'index.html';
+        }
+
+        const CURRENT_USER = sessionStorage.getItem('currentUserName2') || localStorage.getItem('bpmCurrentUserName2') || "单证员A";
+        if (CURRENT_USER) sessionStorage.setItem('currentUserName2', CURRENT_USER);
+
+        const DEFAULT_PROJECT_ID = '项目01';
+
+        function normalizeProjectId(pid) {
+            const raw = (pid == null) ? '' : String(pid).trim();
+            if (!raw) return DEFAULT_PROJECT_ID;
+            if (raw !== '项目01') return DEFAULT_PROJECT_ID;
+            return raw;
+        }
+
+        function getCurrentProjectId() {
+            const pid = sessionStorage.getItem('currentProjectId') || localStorage.getItem('bpmCurrentProjectId');
+            const norm = normalizeProjectId(pid);
+            if (norm) {
+                sessionStorage.setItem('currentProjectId', norm);
+                localStorage.setItem('bpmCurrentProjectId', norm);
+            }
+            return norm;
+        }
+
+        function updateProjectNameUI() {
+            const pid = getCurrentProjectId();
+            const name = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(pid) : pid;
+            const title = name || pid || '';
+            const el = document.getElementById('deptProjectName');
+            if (el) el.textContent = title;
+            const cardEl = document.getElementById('currentProjectCardName');
+            if (cardEl) cardEl.textContent = title;
+        }
+
+        function parseVisibilityInput(visibility) {
+            if (Array.isArray(visibility)) return visibility.map(v => (v === '项目管理' ? '内控管理' : v));
+            if (typeof visibility === 'string') {
+                try {
+                    const parsed = JSON.parse(visibility);
+                    if (Array.isArray(parsed)) return parsed.map(v => (v === '项目管理' ? '内控管理' : v));
+                    if (typeof parsed === 'string') return [parsed === '项目管理' ? '内控管理' : parsed];
+                } catch (e) {}
+                const s = String(visibility).replace(/^['"]|['"]$/g, '');
+                return [s === '项目管理' ? '内控管理' : s];
+            }
+            if (visibility == null) return [];
+            const s = String(visibility).replace(/^['"]|['"]$/g, '');
+            return [s === '项目管理' ? '内控管理' : s];
+        }
+
+        function getSelectedVis() {
+            const arr = Array.from(document.querySelectorAll('.vis-check')).filter(cb => cb.checked).map(cb => cb.value);
+            if (arr.includes('all')) return ['all'];
+            return arr;
+        }
+
+        function canSeeDoc(doc) {
+            if (!doc) return false;
+            const vis = parseVisibilityInput(doc.visibility);
+            if (vis.includes('all')) return true;
+            if (doc.dept === REQUIRED_DEPT) return true;
+            if (vis.includes(REQUIRED_DEPT)) return true;
+            return doc.applicant === CURRENT_USER;
+        }
+
+        async function renderLedger() {
+            const tbody = document.getElementById('ledgerBody');
+            if (!tbody) return;
+
+            const docs = await getDocs();
+            const pid = getCurrentProjectId();
+            const rows = (docs || []).filter(d => normalizeProjectId(d.projectId) === pid).filter(d => d && d.dept === REQUIRED_DEPT).filter(canSeeDoc);
+
+            const countEl = document.getElementById('docCount');
+            if (countEl) countEl.textContent = String(rows.length);
+
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="muted">暂无单证</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            rows.forEach(d => {
+                const tr = document.createElement('tr');
+                const createdAt = d.createdAt ? new Date(d.createdAt).toLocaleString() : '-';
+                tr.innerHTML = `
+                    <td>${normalizeProjectId(d.projectId)}</td>
+                    <td>
+                        <div style="font-weight:800;">${d.type || '-'}</div>
+                        <div class="muted">${d.note ? String(d.note) : ''}</div>
+                    </td>
+                    <td>${createdAt}</td>
+                    <td>
+                        <button class="btn" data-act="view" data-id="${d.id}">查看</button>
+                        <button class="btn btn-danger" data-act="del" data-id="${d.id}">删除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.querySelectorAll('button[data-act="view"]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    await viewDoc(id);
+                });
+            });
+
+            tbody.querySelectorAll('button[data-act="del"]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    await removeDoc(id);
+                });
+            });
+        }
+
+        async function viewDoc(id) {
+            const doc = await getDoc(id);
+            if (!doc || !doc.fileData) {
+                alert('无法找到文件内容。');
+                return;
+            }
+            const win = window.open();
+            if (!win) return;
+            const safeName = String(doc.name || doc.type || '文件').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            const dataUrl = doc.fileData;
+            const isPreviewable = /^data:(application\/pdf|image\/|text\/)/i.test(dataUrl);
+            win.document.open();
+            if (isPreviewable) {
+                win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="margin:0"><iframe src="${dataUrl}" frameborder="0" style="border:0;width:100%;height:100vh;"></iframe></body></html>`);
+            } else {
+                win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial; padding:16px;"><div style="font-weight:800;margin-bottom:10px;">${safeName}</div><a href="${dataUrl}" download="${safeName}" style="display:inline-block;background:#1890ff;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:800;">下载文件</a></body></html>`);
+            }
+            win.document.close();
+        }
+
+        async function removeDoc(id) {
+            if (!confirm('确定删除该单证吗？')) return;
+            const doc = await getDoc(id);
+            if (doc && doc.applicant && doc.applicant !== CURRENT_USER) {
+                alert('权限不足：仅发布者可删除。');
+                return;
+            }
+            await deleteDocAPI(id);
+            await renderLedger();
+        }
+
+        async function uploadDoc() {
+            const btn = document.getElementById('uploadBtn');
+            const hint = document.getElementById('uploadHint');
+            const fileInput = document.getElementById('fileUpload');
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+            if (!file) {
+                alert('请先选择文件。');
+                return;
+            }
+            const maxBytes = 900 * 1024;
+            if (file.size > maxBytes) {
+                alert(`文件过大（${Math.ceil(file.size / 1024)}KB），建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB。`);
+                return;
+            }
+
+            const pid = getCurrentProjectId();
+            const type = (document.getElementById('docType') || {}).value || '其他';
+            const tags = (document.getElementById('tagsInput') || {}).value || '';
+            const note = (document.getElementById('noteInput') || {}).value || '';
+            const visibility = getSelectedVis();
+
+            if (btn) btn.disabled = true;
+            if (hint) hint.textContent = '上传中...';
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const fileData = e.target.result;
+                    const doc = await addDoc({
+                        projectId: pid,
+                        dept: REQUIRED_DEPT,
+                        type,
+                        name: file.name,
+                        fileData,
+                        applicant: CURRENT_USER,
+                        note,
+                        tags,
+                        status: 'pending',
+                        visibility
+                    });
+                    if (doc && doc.id) {
+                        await addActivity({
+                            text: `${CURRENT_USER} 上传了单据：${file.name}`,
+                            uploader: CURRENT_USER,
+                            projectId: pid,
+                            docId: doc.id,
+                            visibility
+                        });
+                    }
+                    if (fileInput) fileInput.value = '';
+                    if (hint) hint.textContent = '上传成功';
+                    await renderLedger();
+                } catch (e2) {
+                    alert('上传失败：' + (e2 && e2.message ? e2.message : '未知错误'));
+                } finally {
+                    if (btn) btn.disabled = false;
+                    setTimeout(() => { if (hint) hint.textContent = ''; }, 1500);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.onload = function() {
+            updateProjectNameUI();
+            const userTag = document.getElementById('userTag');
+            if (userTag) userTag.textContent = `已登录: ${CURRENT_USER}`;
+
+            const btn = document.getElementById('uploadBtn');
+            if (btn) btn.addEventListener('click', uploadDoc);
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'bpmProjectNames') updateProjectNameUI();
+                if (e.key === 'bpmSyncTick') {
+                    if (document.hidden) return;
+                    renderLedger();
+                }
+            });
+
+            renderLedger();
+        };
+    </script>
+</body>
+</html>
