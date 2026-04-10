@@ -887,6 +887,20 @@
         }
     }
 
+    async function viewFileById(docId) {
+        if (!docId) return;
+        try {
+            const doc = await getDoc(docId);
+            if (!doc) {
+                setInlineNotice('无法找到文件内容。');
+                return;
+            }
+            await viewFile(doc.applicant || '', doc.name || '', doc.visibility, docId);
+        } catch (e) {
+            setInlineNotice('查看文件失败，请检查网络连接。');
+        }
+    }
+
     async function deleteDoc(docId) {
         try {
             const docToDelete = await getDoc(docId);
@@ -1258,13 +1272,15 @@
     function parseVisibilityInput(input) {
         if (!input) return [];
         const norm = (v) => (v === '项目管理' ? '内控管理' : v);
-        if (Array.isArray(input)) return input.map(x => norm(String(x)));
+        if (Array.isArray(input)) return input.map(x => norm(String(x))).filter(Boolean);
         try {
             const parsed = JSON.parse(input);
-            if (Array.isArray(parsed)) return parsed.map(x => norm(String(x)));
+            if (Array.isArray(parsed)) return parsed.map(x => norm(String(x))).filter(Boolean);
             if (typeof parsed === 'string') return [norm(String(parsed))];
         } catch(e) {}
-        return String(input).split(/[,，]/).map(s => norm(s.trim().replace(/^['"]|['"]$/g, ''))).filter(Boolean);
+        let s = String(input).trim().replace(/^['"]|['"]$/g, '');
+        if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+        return s.split(/[,，]/).map(v => norm(v.trim().replace(/^['"]|['"]$/g, ''))).filter(Boolean);
     }
 
     function ensureDefaultVisibility() {
@@ -1547,7 +1563,7 @@
         });
 
         if (rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">暂无单证</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">暂无单证</td></tr>';
             return;
         }
 
@@ -1562,13 +1578,16 @@
             const historyCount = getLedgerHistory(doc).length;
             const historyBadge = historyCount > 0 ? `<span class="history-badge" onclick="openHistory('${doc.id}')">${historyCount}</span>` : '';
 
-            const viewLink = `<a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>`;
+            const viewLink = `<a href="#" class="action-link" onclick="viewFileById('${doc.id}')">查看</a>`;
             const editLink = `<a href="#" class="action-link" onclick="openLedgerEdit('${doc.id}')">编辑</a>`;
             const delLink = `<a href="#" class="action-link" style="color:#ff4d4f;" onclick="deleteDoc('${doc.id}')">删除</a>`;
 
             tr.innerHTML = `
-                <td>${formatProjectId(doc.projectId)}</td>
-                <td>${category} / ${doc.type || '-'} ${historyBadge}</td>
+                <td>
+                    <div style="font-weight:700;">${category} / ${doc.type || '-'}</div>
+                    <div style="font-size:12px; color: rgba(0,0,0,0.45); margin-top:4px;">${doc.name || '-'}</div>
+                    ${historyBadge}
+                </td>
                 <td>${getAuditDisplay(doc)}</td>
                 <td>${getProcessDisplay(doc)}${lastLine}</td>
                 <td>${getDeptDisplay(doc.dept)}</td>
@@ -1933,7 +1952,7 @@
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) pendingEl.innerText = 'N/A';
             const tbody = document.getElementById('ledgerBody');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">加载失败...</td></tr>';
         } finally {
             window.__pmRefreshInFlight = false;
         }
@@ -2199,7 +2218,6 @@
                 </div>
                 <table class="doc-table">
                     <colgroup>
-                        <col style="width: 90px;">
                         <col style="width: 220px;">
                         <col style="width: 90px;">
                         <col style="width: 220px;">
@@ -2210,7 +2228,6 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>项目</th>
                             <th>单证类型</th>
                             <th>审核</th>
                             <th>流程状态</th>

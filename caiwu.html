@@ -708,21 +708,28 @@
     var reuploadDocId = null;
 
     function parseVisibilityInput(visibility) {
-        if (Array.isArray(visibility)) return visibility.map(v => (v === '项目管理' ? '内控管理' : v));
+        const norm = (v) => (v === '项目管理' ? '内控管理' : v);
+        if (Array.isArray(visibility)) return visibility.map(v => norm(String(v))).filter(Boolean);
         if (typeof visibility === 'string') {
+            const raw = String(visibility).trim();
             try {
-                const parsed = JSON.parse(visibility);
-                if (Array.isArray(parsed)) return parsed.map(v => (v === '项目管理' ? '内控管理' : v));
-                if (typeof parsed === 'string') return [parsed === '项目管理' ? '内控管理' : parsed];
-                return [String(visibility).replace(/^['"]|['"]$/g, '') === '项目管理' ? '内控管理' : String(visibility).replace(/^['"]|['"]$/g, '')];
-            } catch (e) {
-                const s = String(visibility).replace(/^['"]|['"]$/g, '');
-                return [s === '项目管理' ? '内控管理' : s];
-            }
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed.map(v => norm(String(v))).filter(Boolean);
+                if (typeof parsed === 'string') return [norm(parsed)];
+            } catch (e) {}
+
+            let s = raw.replace(/^['"]|['"]$/g, '');
+            if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+            const parts = s
+                .split(/[,，]/)
+                .map(p => p.trim().replace(/^['"]|['"]$/g, ''))
+                .filter(Boolean)
+                .map(norm);
+            return parts;
         }
         if (visibility == null) return [];
-        const s = String(visibility).replace(/^['"]|['"]$/g, '');
-        return [s === '项目管理' ? '内控管理' : s];
+        const s = String(visibility).trim().replace(/^['"]|['"]$/g, '');
+        return s ? [norm(s)] : [];
     }
 
     function getVisCheckbox(value) {
@@ -1009,6 +1016,20 @@
             }
         } else {
             alert('抱歉，您没有权限查看此文件。');
+        }
+    }
+
+    async function viewFileById(docId) {
+        if (!docId) return;
+        try {
+            const doc = await getDoc(docId);
+            if (!doc) {
+                alert('无法找到文件内容。');
+                return;
+            }
+            await viewFile(doc.applicant || '', doc.name || '', doc.visibility, docId);
+        } catch (e) {
+            alert('查看文件失败，请检查网络连接。');
         }
     }
 
@@ -1342,7 +1363,7 @@
         });
 
         if (rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">暂无单证</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">暂无单证</td></tr>';
             return;
         }
 
@@ -1358,8 +1379,11 @@
             const historyBadge = historyCount > 0 ? `<span class="history-badge" onclick="openHistory('${doc.id}')">${historyCount}</span>` : '';
 
             tr.innerHTML = `
-                <td>${formatProjectId(doc.projectId)}</td>
-                <td>${category} / ${doc.type || '-'} ${historyBadge}</td>
+                <td>
+                    <div style="font-weight:700;">${category} / ${doc.type || '-'}</div>
+                    <div style="font-size:12px; color: rgba(0,0,0,0.45); margin-top:4px;">${doc.name || '-'}</div>
+                    ${historyBadge}
+                </td>
                 <td>${getAuditDisplay(doc)}</td>
                 <td>${getProcessDisplay(doc)}${lastLine}</td>
                 <td>${getDeptDisplay(doc.dept)}</td>
@@ -1606,7 +1630,7 @@
             docs.forEach(doc => {
                 var canSee = false;
                 if (IS_ADMIN || doc.applicant === CURRENT_USER) canSee = true;
-                var visArray = Array.isArray(doc.visibility) ? doc.visibility : [doc.visibility];
+                var visArray = parseVisibilityInput(doc.visibility);
                 if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canSee = true;
 
                 if (canSee) {
@@ -1619,15 +1643,15 @@
                     else if (doc.status === 'no_audit') statusDisplay = '<span style="color: #52c41a;">无需审核</span>';
 
                     const actions = `
-                        <a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
+                        <a href="#" class="action-link" onclick="viewFileById('${doc.id}')">查看</a>
                         ${(doc.status === 'rejected' && doc.applicant === CURRENT_USER) ? ` | <a href="#" class="action-link" style="color: #1890ff;" onclick="triggerReupload('${doc.id}')">重新上传</a>` : ''}
                         ${(IS_ADMIN || doc.applicant === CURRENT_USER) ? ` | <a href="#" class="action-link" style="color: #ff4d4f;" onclick="deleteDoc('${doc.id}', '${doc.applicant}')">删除</a>` : ''}
                     `;
-                    tr.innerHTML = `<td>[ ${doc.id} ]</td>
-                                  <td>[ ${doc.type} ]</td>
+                    tr.innerHTML = `<td>${doc.name || '-'}</td>
+                                  <td>${doc.type || '-'}</td>
                                   <td>${statusDisplay}</td>
-                                  <td>[ ${doc.applicant} ]</td>
-                                  <td>[ ${new Date(doc.createdAt).toLocaleString()} ]</td>
+                                  <td>${doc.applicant || '-'}</td>
+                                  <td>${new Date(doc.createdAt).toLocaleString()}</td>
                                   <td>${actions.trim()}</td>`;
                     pendingTable.appendChild(tr);
                 }
@@ -1647,7 +1671,7 @@
             const pendingCountEl = document.getElementById('pendingCount');
             if (pendingCountEl) pendingCountEl.innerText = '[ 0 ]';
             const tbody = document.getElementById('ledgerBody');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: red;">加载失败...</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">加载失败...</td></tr>';
         }
     }
 
@@ -1806,7 +1830,6 @@
                 <table class="doc-table">
                     <thead>
                         <tr>
-                            <th style="width: 100px;">项目</th>
                             <th>分类 / 类型</th>
                             <th style="width: 100px;">审核</th>
                             <th>流程状态</th>
@@ -1817,7 +1840,7 @@
                         </tr>
                     </thead>
                     <tbody id="ledgerBody">
-                        <tr><td colspan="8" style="text-align:center; color:#999;">正在加载台账...</td></tr>
+                        <tr><td colspan="7" style="text-align:center; color:#999;">正在加载台账...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1831,7 +1854,7 @@
                 <table class="doc-table">
                     <thead>
                         <tr>
-                            <th>项目ID</th>
+                            <th>文件名称</th>
                             <th>单证类型</th>
                             <th>审核状态</th>
                             <th>申请人</th>
