@@ -131,6 +131,28 @@
             color: #1890ff;
         }
         .muted { color: rgba(0,0,0,0.45); font-size: 12px; }
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal {
+            width: 100%;
+            max-width: 520px;
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+            padding: 16px;
+        }
+        .modal h3 { margin: 0 0 6px; font-size: 16px; }
+        .modal p { margin: 0 0 12px; color: rgba(0,0,0,0.45); font-size: 12px; line-height: 1.6; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -198,15 +220,44 @@
                 <thead>
                     <tr>
                         <th style="width:100px;">项目</th>
+                        <th style="width:220px;">文件名称</th>
                         <th>类型</th>
+                        <th style="width:120px;">审核状态</th>
+                        <th style="width:120px;">审核人</th>
                         <th style="width:120px;">提交时间</th>
-                        <th style="width:160px;">操作</th>
+                        <th style="width:220px;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="ledgerBody">
-                    <tr><td colspan="4" class="muted">正在加载...</td></tr>
+                    <tr><td colspan="7" class="muted">正在加载...</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div class="modal-mask" id="auditMask">
+        <div class="modal" role="dialog" aria-modal="true">
+            <h3>审核</h3>
+            <p id="auditSub">请填写审核状态与审核人。</p>
+            <input type="hidden" id="auditDocId">
+            <div class="row" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <label>审核状态</label>
+                    <select id="auditStatus">
+                        <option value="pending">待审核</option>
+                        <option value="passed">通过</option>
+                        <option value="rejected">退回</option>
+                    </select>
+                </div>
+                <div>
+                    <label>审核人</label>
+                    <input id="auditBy" type="text" placeholder="请输入审核人姓名">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="auditCancel">取消</button>
+                <button class="btn btn-primary" id="auditOk">确认</button>
+            </div>
         </div>
     </div>
 
@@ -252,6 +303,18 @@
             if (cardEl) cardEl.textContent = title;
         }
 
+        function getAuditDisplay(status) {
+            const s = String(status || 'pending');
+            if (s === 'passed') return '通过';
+            if (s === 'rejected') return '退回';
+            return '待审核';
+        }
+
+        function getAuditorDisplay(doc) {
+            const a = doc && (doc.auditor || doc.auditBy);
+            return a ? String(a) : '';
+        }
+
         async function renderLedger() {
             const tbody = document.getElementById('ledgerBody');
             if (!tbody) return;
@@ -264,7 +327,7 @@
             if (countEl) countEl.textContent = String(rows.length);
 
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="muted">暂无单证</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="muted">暂无单证</td></tr>';
                 return;
             }
 
@@ -272,15 +335,22 @@
             rows.forEach(d => {
                 const tr = document.createElement('tr');
                 const createdAt = d.createdAt ? new Date(d.createdAt).toLocaleString() : '-';
+                const fileName = d.name || '';
+                const auditStatus = getAuditDisplay(d.status);
+                const auditor = getAuditorDisplay(d);
                 tr.innerHTML = `
                     <td>${normalizeProjectId(d.projectId)}</td>
+                    <td>${String(fileName || '-')}</td>
                     <td>
                         <div style="font-weight:800;">${d.type || '-'}</div>
                         <div class="muted">${d.note ? String(d.note) : ''}</div>
                     </td>
+                    <td><span class="pill">${auditStatus}</span></td>
+                    <td>${String(auditor || '-')}</td>
                     <td>${createdAt}</td>
                     <td>
                         <button class="btn" data-act="view" data-id="${d.id}">查看</button>
+                        <button class="btn btn-primary" data-act="audit" data-id="${d.id}">审核</button>
                         <button class="btn btn-danger" data-act="del" data-id="${d.id}">删除</button>
                     </td>
                 `;
@@ -300,6 +370,65 @@
                     await removeDoc(id);
                 });
             });
+
+            tbody.querySelectorAll('button[data-act="audit"]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    await openAudit(id);
+                });
+            });
+        }
+
+        function openAuditMask() {
+            const mask = document.getElementById('auditMask');
+            if (mask) mask.style.display = 'flex';
+        }
+
+        function closeAuditMask() {
+            const mask = document.getElementById('auditMask');
+            if (mask) mask.style.display = 'none';
+        }
+
+        async function openAudit(id) {
+            const doc = await getDoc(id);
+            if (!doc) {
+                alert('无法获取单证信息。');
+                return;
+            }
+            document.getElementById('auditDocId').value = id;
+            document.getElementById('auditStatus').value = String(doc.status || 'pending');
+            document.getElementById('auditBy').value = getAuditorDisplay(doc);
+            const sub = document.getElementById('auditSub');
+            if (sub) sub.textContent = `文件：${doc.name || doc.type || '-'} · 当前：${getAuditDisplay(doc.status)}`;
+            openAuditMask();
+        }
+
+        async function confirmAudit() {
+            const id = (document.getElementById('auditDocId') || {}).value || '';
+            if (!id) return;
+            const status = (document.getElementById('auditStatus') || {}).value || 'pending';
+            const auditor = (document.getElementById('auditBy') || {}).value || '';
+            if (!String(auditor).trim()) {
+                alert('请填写审核人。');
+                return;
+            }
+
+            const doc = await getDoc(id);
+            if (!doc) {
+                alert('无法获取单证信息。');
+                return;
+            }
+
+            await updateDoc(id, { status, auditor: String(auditor).trim() });
+            await addActivity({
+                text: `${String(auditor).trim()} 审核${getAuditDisplay(status)}：${doc.name || doc.type || ''}`,
+                uploader: String(auditor).trim(),
+                projectId: getCurrentProjectId(),
+                docId: id,
+                visibility: ['all']
+            });
+            closeAuditMask();
+            await renderLedger();
         }
 
         async function viewDoc(id) {
@@ -402,6 +531,15 @@
 
             const btn = document.getElementById('uploadBtn');
             if (btn) btn.addEventListener('click', uploadDoc);
+
+            const auditCancel = document.getElementById('auditCancel');
+            if (auditCancel) auditCancel.addEventListener('click', closeAuditMask);
+            const auditOk = document.getElementById('auditOk');
+            if (auditOk) auditOk.addEventListener('click', confirmAudit);
+            const auditMask = document.getElementById('auditMask');
+            if (auditMask) auditMask.addEventListener('click', (e) => {
+                if (e.target && e.target.id === 'auditMask') closeAuditMask();
+            });
 
             window.addEventListener('storage', (e) => {
                 if (e.key === 'bpmProjectNames') updateProjectNameUI();

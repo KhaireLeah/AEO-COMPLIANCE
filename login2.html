@@ -172,7 +172,7 @@
     <div class="page">
         <div class="card">
             <h1 id="pTitle">项目01</h1>
-            <p>精简入口：仅包含“单证管理 / 内控管理”两个模块，不包含搜索栏/实时钟/备忘录等功能。</p>
+            <p>精简入口：仅包含“单证管理”模块，不包含搜索栏/实时钟/备忘录等功能。</p>
 
             <div class="module">
                 <div class="module-left">
@@ -187,21 +187,6 @@
                     </div>
                 </div>
                 <button class="btn btn-primary" id="enterDocsBtn">进入</button>
-            </div>
-
-            <div class="module">
-                <div class="module-left">
-                    <div class="module-icon" aria-hidden="true" style="background: rgba(114,98,253,0.14);">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                            <path fill="#7262fd" d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4zm-1 14.2l6.2-6.2-1.4-1.4L11 13.4 8.2 10.6 6.8 12l4.2 4.2z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="module-title">内控管理</div>
-                        <div class="module-sub">验证代码：XM01</div>
-                    </div>
-                </div>
-                <button class="btn btn-primary" id="enterCtrlBtn" style="background:#7262fd; border-color:#7262fd;">进入</button>
             </div>
 
             <div class="meta-row">
@@ -227,8 +212,7 @@
     <script>
         const DEFAULT_PROJECT_ID = '项目01';
         const MODULES = {
-            docs: { dept: '业务部', code: 'YW01', userName: '单证员A', role: 'member', next: 'yewu2.html', title: '单证管理验证', desc: '请输入单证管理验证代码以继续' },
-            ctrl: { dept: '内控管理', code: 'XM01', userName: '项目经理D', role: 'pm', next: 'xiangmu2.html', title: '内控管理验证', desc: '请输入内控管理验证代码以继续' }
+            docs: { dept: '业务部', code: 'YW01', userName: '单证员A', role: 'member', next: 'yewu2.html', title: '单证管理验证', desc: '请输入单证管理验证代码以继续' }
         };
         let activeModuleKey = 'docs';
 
@@ -299,12 +283,6 @@
             const docsBtn = document.getElementById('enterDocsBtn');
             if (docsBtn) docsBtn.addEventListener('click', () => {
                 activeModuleKey = 'docs';
-                openAuth();
-            });
-
-            const ctrlBtn = document.getElementById('enterCtrlBtn');
-            if (ctrlBtn) ctrlBtn.addEventListener('click', () => {
-                activeModuleKey = 'ctrl';
                 openAuth();
             });
 
