@@ -161,6 +161,27 @@
         .modal h3 { margin: 0 0 6px; font-size: 16px; }
         .modal p { margin: 0 0 12px; color: rgba(0,0,0,0.45); font-size: 12px; line-height: 1.6; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0 8px;
+        }
+        .tab {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #f5f5f5;
+            border: 1px solid rgba(0,0,0,0.08);
+            font-weight: 800;
+            font-size: 12px;
+            color: rgba(0,0,0,0.65);
+            cursor: pointer;
+            user-select: none;
+        }
+        .tab.active {
+            background: rgba(24,144,255,0.12);
+            color: #1890ff;
+            border-color: rgba(24,144,255,0.25);
+        }
     </style>
 </head>
 <body>
@@ -231,10 +252,13 @@
         <div class="section">
             <h3>单证台账</h3>
             <p class="hint">只展示部门为“单证管理(业务部)”的记录。</p>
+            <div class="tabs" id="ledgerTabs">
+                <div class="tab active" data-tab="pending">未处理单据</div>
+                <div class="tab" data-tab="processed">已处理单据</div>
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th style="width:100px;">项目</th>
                         <th style="width:220px;">文件名称</th>
                         <th>类型</th>
                         <th style="width:120px;">审核状态</th>
@@ -244,7 +268,7 @@
                     </tr>
                 </thead>
                 <tbody id="ledgerBody">
-                    <tr><td colspan="7" class="muted">正在加载...</td></tr>
+                    <tr><td colspan="6" class="muted">正在加载...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -296,6 +320,7 @@
         if (CURRENT_USER) sessionStorage.setItem('currentUserName2', CURRENT_USER);
 
         const DEFAULT_PROJECT_ID = '项目01';
+        let LEDGER_TAB = 'pending';
         let LEDGER_BY_ID = new Map();
 
         function normalizeProjectId(pid) {
@@ -374,14 +399,30 @@
 
             const docs = await getDocs();
             const pid = getCurrentProjectId();
-            const rows = (docs || []).filter(d => normalizeProjectId(d.projectId) === pid).filter(d => d && d.dept === REQUIRED_DEPT);
-            LEDGER_BY_ID = new Map(rows.map(d => [String(d.id), d]));
+            const allRows = (docs || []).filter(d => normalizeProjectId(d.projectId) === pid).filter(d => d && d.dept === REQUIRED_DEPT);
+            const pendingCnt = allRows.filter(d => shouldRequireAudit(d) && normalizeAuditStatus(d.status) === 'pending').length;
+            const processedCnt = allRows.length - pendingCnt;
+
+            const tabs = document.querySelectorAll('#ledgerTabs .tab');
+            if (tabs && tabs.length >= 2) {
+                tabs[0].textContent = `未处理单据 [ ${pendingCnt} ]`;
+                tabs[1].textContent = `已处理单据 [ ${processedCnt} ]`;
+                tabs[0].classList.toggle('active', LEDGER_TAB === 'pending');
+                tabs[1].classList.toggle('active', LEDGER_TAB !== 'pending');
+            }
+
+            const rows = allRows.filter(d => {
+                const isPending = shouldRequireAudit(d) && normalizeAuditStatus(d.status) === 'pending';
+                if (LEDGER_TAB === 'pending') return isPending;
+                return !isPending;
+            });
+            LEDGER_BY_ID = new Map(allRows.map(d => [String(d.id), d]));
 
             const countEl = document.getElementById('docCount');
-            if (countEl) countEl.textContent = String(rows.length);
+            if (countEl) countEl.textContent = String(allRows.length);
 
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="muted">暂无单证</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="muted">暂无单证</td></tr>';
                 return;
             }
 
@@ -396,7 +437,6 @@
                 const hasRejectReason = normalizeAuditStatus(d.status) === 'rejected' && !!String(rejectReason).trim();
                 const showAuditBtn = shouldRequireAudit(d);
                 tr.innerHTML = `
-                    <td>${escapeHtml(normalizeProjectId(d.projectId))}</td>
                     <td>${escapeHtml(fileName || '-')}</td>
                     <td>
                         <div style="font-weight:800;">${escapeHtml(d.type || '-')}</div>
@@ -535,11 +575,18 @@
             const dataUrl = doc.fileData;
             const isPreviewable = /^data:(application\/pdf|image\/|text\/)/i.test(dataUrl);
             win.document.open();
-            if (isPreviewable) {
-                win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="margin:0"><iframe src="${dataUrl}" frameborder="0" style="border:0;width:100%;height:100vh;"></iframe></body></html>`);
-            } else {
-                win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial; padding:16px;"><div style="font-weight:800;margin-bottom:10px;">${safeName}</div><a href="${dataUrl}" download="${safeName}" style="display:inline-block;background:#1890ff;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:800;">下载文件</a></body></html>`);
-            }
+            win.document.write(`<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>${safeName}</title></head>
+<body style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial;">
+  <div style="padding:12px 14px; border-bottom:1px solid rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div style="font-weight:800; color: rgba(0,0,0,0.85); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeName}</div>
+    <a href="${dataUrl}" download="${safeName}" style="display:inline-block;background:#1890ff;color:#fff;text-decoration:none;padding:8px 12px;border-radius:10px;font-weight:800; flex:0 0 auto;">下载</a>
+  </div>
+  ${isPreviewable ? `<iframe src="${dataUrl}" frameborder="0" style="border:0;width:100%;height: calc(100vh - 52px);"></iframe>`
+                  : `<div style="padding:16px; color: rgba(0,0,0,0.65); font-size:12px; line-height:1.7;">当前文件格式浏览器可能无法直接预览，请点击右上角“下载”后打开。</div>`}
+</body>
+</html>`);
             win.document.close();
         }
 
@@ -651,6 +698,15 @@
             const auditMask = document.getElementById('auditMask');
             if (auditMask) auditMask.addEventListener('click', (e) => {
                 if (e.target && e.target.id === 'auditMask') closeAuditMask();
+            });
+
+            const ledgerTabs = document.getElementById('ledgerTabs');
+            if (ledgerTabs) ledgerTabs.addEventListener('click', (e) => {
+                const tab = e.target && e.target.closest ? e.target.closest('.tab') : null;
+                if (!tab) return;
+                const key = tab.getAttribute('data-tab') || 'pending';
+                LEDGER_TAB = (key === 'processed') ? 'processed' : 'pending';
+                renderLedger();
             });
 
             window.addEventListener('storage', (e) => {

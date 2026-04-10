@@ -975,34 +975,31 @@
 
                 if (doc && doc.fileData) {
                     const displayName = fileName || doc.name || '文件';
+                    const safeName = String(displayName).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                     const dataUrl = doc.fileData;
                     const isPreviewable = /^data:(application\/pdf|image\/|text\/)/i.test(dataUrl);
-
-                    if (isPreviewable) {
-                        win.document.write('<iframe src="' + dataUrl + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
-                    } else {
-                        const safeName = String(displayName).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                        const html = `
+                    const html = `
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>${safeName}</title>
+  <meta charset="utf-8">
+  <title>${safeName}</title>
 </head>
 <body style="margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;">
-  <div style="padding:16px;">
-    <div style="font-size:16px; font-weight:600; margin-bottom:12px;">${safeName}</div>
-    <a href="${dataUrl}" download="${safeName}" style="display:inline-block; background:#1890ff; color:#fff; text-decoration:none; padding:10px 14px; border-radius:6px;">下载文件</a>
-    <div style="margin-top:10px; color: rgba(0,0,0,0.65); font-size:12px; line-height:1.6;">
-      当前文件格式浏览器可能无法直接预览，建议下载后打开（PDF/图片可直接预览）。
-    </div>
+  <div style="padding:12px 14px; border-bottom:1px solid rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div style="font-weight:700; color: rgba(0,0,0,0.85); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeName}</div>
+    <a href="${dataUrl}" download="${safeName}" style="display:inline-block; background:#1890ff; color:#fff; text-decoration:none; padding:8px 12px; border-radius:8px; font-weight:700; flex:0 0 auto;">下载</a>
   </div>
+  ${isPreviewable
+        ? `<iframe src="${dataUrl}" frameborder="0" style="border:0; width:100%; height: calc(100vh - 52px);" allowfullscreen></iframe>`
+        : `<div style="padding:16px; color: rgba(0,0,0,0.65); font-size:12px; line-height:1.7;">
+            当前文件格式浏览器可能无法直接预览，请点击右上角“下载”后打开。
+          </div>`}
 </body>
 </html>`;
-                        win.document.open();
-                        win.document.write(html);
-                        win.document.close();
-                    }
+                    win.document.open();
+                    win.document.write(html);
+                    win.document.close();
                 } else {
                     win.document.open();
                     win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>无法预览</title></head><body style="font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif; padding:16px;">无法找到文件内容。文件可能已被删除或数据不完整。</body></html>');
@@ -1599,6 +1596,15 @@
         STATE.lastActivityByDocId = index;
     }
 
+    let UPLOAD_LIST_TAB = 'pending';
+
+    function setUploadListTab(next) {
+        UPLOAD_LIST_TAB = (next === 'processed') ? 'processed' : 'pending';
+        const tabs = document.querySelectorAll('.doc-section .tabs .tab');
+        tabs.forEach((t, i) => t.classList.toggle('active', (UPLOAD_LIST_TAB === 'pending' ? i === 0 : i === 1)));
+        refreshData();
+    }
+
     async function refreshData() {
         try {
             const projectId = getCurrentProjectId();
@@ -1625,6 +1631,7 @@
             // 更新“未处理单据”列表
             const pendingTable = document.getElementById('pendingDocsBody');
             let pendingCount = 0;
+            let processedCount = 0;
             pendingTable.innerHTML = '';
             
             docs.forEach(doc => {
@@ -1634,7 +1641,16 @@
                 if (visArray.includes('all') || visArray.includes(REQUIRED_DEPT)) canSee = true;
 
                 if (canSee) {
-                    if (doc.dept === REQUIRED_DEPT && doc.status === 'pending') pendingCount++;
+                    if (doc.dept !== REQUIRED_DEPT) return;
+
+                    const requiresAudit = !(doc.requiresAudit === false || String(doc.status || '') === 'no_audit');
+                    const isPending = requiresAudit && String(doc.status || '') === 'pending';
+                    if (isPending) pendingCount++;
+                    else processedCount++;
+
+                    if (UPLOAD_LIST_TAB === 'pending' && !isPending) return;
+                    if (UPLOAD_LIST_TAB === 'processed' && isPending) return;
+
                     var tr = document.createElement('tr');
                     var statusDisplay = '';
                     if (doc.status === 'pending') statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
@@ -1657,6 +1673,11 @@
                 }
             });
             document.getElementById('pendingCount').innerText = '[ ' + pendingCount + ' ]';
+            const tabs = document.querySelectorAll('.doc-section .tabs .tab');
+            if (tabs && tabs.length >= 2) {
+                tabs[0].textContent = `[ 未处理单据 ] [ ${pendingCount} ]`;
+                tabs[1].textContent = `已处理单据 [ ${processedCount} ]`;
+            }
 
         } catch (error) {
             console.error('Failed to refresh data:', error);
@@ -1698,6 +1719,11 @@
         });
 
         initVisibilityControls();
+        const tabs = document.querySelectorAll('.doc-section .tabs .tab');
+        if (tabs && tabs.length >= 2) {
+            tabs[0].addEventListener('click', () => setUploadListTab('pending'));
+            tabs[1].addEventListener('click', () => setUploadListTab('processed'));
+        }
 
         window.addEventListener('storage', e => {
             if (e.key === 'bpmSyncTick') {
