@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>单证管理 - 精简工作台</title>
+    <title>内控管理 - 精简工作台</title>
     <style>
         body {
             background-color: #f0f2f5;
@@ -23,8 +23,8 @@
         .right-menu { display: flex; align-items: center; gap: 16px; }
         .btn-link {
             text-decoration: none;
-            color: #1890ff;
-            font-weight: 700;
+            color: #7262fd;
+            font-weight: 800;
             font-size: 14px;
         }
         .container {
@@ -42,9 +42,7 @@
             align-items: center;
             margin-bottom: 14px;
         }
-        .top-banner .title {
-            font-weight: 800;
-        }
+        .top-banner .title { font-weight: 900; }
         .cards {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -57,7 +55,7 @@
             border: 1px solid rgba(0,0,0,0.06);
             padding: 14px 16px;
         }
-        .card-title { font-size: 12px; color: rgba(0,0,0,0.45); font-weight: 700; }
+        .card-title { font-size: 12px; color: rgba(0,0,0,0.45); font-weight: 800; }
         .card-value { font-size: 22px; font-weight: 900; margin-top: 6px; }
         .section {
             background: #fff;
@@ -74,7 +72,7 @@
             gap: 10px;
             margin-bottom: 10px;
         }
-        label { font-size: 12px; color: rgba(0,0,0,0.65); font-weight: 700; display: block; margin-bottom: 6px; }
+        label { font-size: 12px; color: rgba(0,0,0,0.65); font-weight: 800; display: block; margin-bottom: 6px; }
         input[type="text"], select, textarea {
             width: 100%;
             box-sizing: border-box;
@@ -93,12 +91,12 @@
             border: 1px solid rgba(0,0,0,0.1);
             background: #fff;
             cursor: pointer;
-            font-weight: 800;
+            font-weight: 900;
         }
         .btn-primary {
-            background: #1890ff;
+            background: #7262fd;
             color: #fff;
-            border-color: #1890ff;
+            border-color: #7262fd;
         }
         .btn-danger {
             background: #ff4d4f;
@@ -118,18 +116,6 @@
             vertical-align: top;
         }
         th { color: rgba(0,0,0,0.65); font-size: 12px; }
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            height: 20px;
-            padding: 0 8px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 800;
-            background: rgba(24,144,255,0.12);
-            color: #1890ff;
-        }
         .muted { color: rgba(0,0,0,0.45); font-size: 12px; }
     </style>
 </head>
@@ -143,7 +129,7 @@
 
     <div class="container">
         <div class="top-banner">
-            <div class="title">[ <span id="deptProjectName"></span> · 单证管理 ]</div>
+            <div class="title">[ <span id="deptProjectName"></span> · 内控管理 ]</div>
             <div class="muted" id="userTag"></div>
         </div>
 
@@ -153,29 +139,28 @@
                 <div class="card-value">[ <span id="currentProjectCardName"></span> ]</div>
             </div>
             <div class="card">
-                <div class="card-title">单证数量</div>
+                <div class="card-title">管理文档数量</div>
                 <div class="card-value" id="docCount">0</div>
             </div>
         </div>
 
         <div class="section">
-            <h3>单证上传</h3>
-            <p class="hint">仅对“单证管理”开放。上传后将出现在下方台账。</p>
+            <h3>管理文档上传</h3>
+            <p class="hint">精简版本：不设置可见性，默认所有人可见；上传后出现在下方台账。</p>
             <div class="row">
                 <div>
-                    <label>单据类型</label>
+                    <label>文档类型</label>
                     <select id="docType">
-                        <option value="外贸合同">外贸合同</option>
-                        <option value="报关委托书">报关委托书</option>
-                        <option value="报关单">报关单</option>
-                        <option value="海关回执">海关回执</option>
-                        <option value="AEO资质">AEO资质</option>
+                        <option value="项目指导书">项目指导书</option>
+                        <option value="项目总结">项目总结</option>
+                        <option value="会议纪要">会议纪要</option>
+                        <option value="进度报告">进度报告</option>
                         <option value="其他">其他</option>
                     </select>
                 </div>
                 <div>
                     <label>标签（逗号分隔）</label>
-                    <input id="tagsInput" type="text" placeholder="例如：紧急, 待补录">
+                    <input id="tagsInput" type="text" placeholder="例如：风险, 加急, 待补充">
                 </div>
             </div>
 
@@ -192,8 +177,8 @@
         </div>
 
         <div class="section">
-            <h3>单证台账</h3>
-            <p class="hint">只展示部门为“单证管理(业务部)”的记录。</p>
+            <h3>内控台账</h3>
+            <p class="hint">只展示部门为“内控管理”的记录（兼容旧数据“项目管理”）。</p>
             <table>
                 <thead>
                     <tr>
@@ -212,15 +197,15 @@
 
     <script type="text/javascript" src="api.js"></script>
     <script>
-        const REQUIRED_DEPT = "业务部";
+        const REQUIRED_DEPT = "内控管理";
         const authorizedDept2 = sessionStorage.getItem('authorizedDept2') || localStorage.getItem('bpmAuthorizedDept2');
         if (authorizedDept2) sessionStorage.setItem('authorizedDept2', authorizedDept2);
-        if (!authorizedDept2 || authorizedDept2 !== REQUIRED_DEPT) {
-            alert('权限不足：请先通过单证入口验证。');
+        if (!authorizedDept2 || (authorizedDept2 !== REQUIRED_DEPT && authorizedDept2 !== '项目管理')) {
+            alert('权限不足：请先通过内控入口验证。');
             window.location.href = 'index.html';
         }
 
-        const CURRENT_USER = sessionStorage.getItem('currentUserName2') || localStorage.getItem('bpmCurrentUserName2') || "单证员A";
+        const CURRENT_USER = sessionStorage.getItem('currentUserName2') || localStorage.getItem('bpmCurrentUserName2') || "项目经理D";
         if (CURRENT_USER) sessionStorage.setItem('currentUserName2', CURRENT_USER);
 
         const DEFAULT_PROJECT_ID = '项目01';
@@ -242,6 +227,11 @@
             return norm;
         }
 
+        function normalizeDeptValue(dept) {
+            if (dept === '项目管理') return '内控管理';
+            return dept;
+        }
+
         function updateProjectNameUI() {
             const pid = getCurrentProjectId();
             const name = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(pid) : pid;
@@ -258,13 +248,15 @@
 
             const docs = await getDocs();
             const pid = getCurrentProjectId();
-            const rows = (docs || []).filter(d => normalizeProjectId(d.projectId) === pid).filter(d => d && d.dept === REQUIRED_DEPT);
+            const rows = (docs || [])
+                .filter(d => normalizeProjectId(d.projectId) === pid)
+                .filter(d => d && normalizeDeptValue(d.dept) === REQUIRED_DEPT);
 
             const countEl = document.getElementById('docCount');
             if (countEl) countEl.textContent = String(rows.length);
 
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="muted">暂无单证</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="muted">暂无文档</td></tr>';
                 return;
             }
 
@@ -275,7 +267,7 @@
                 tr.innerHTML = `
                     <td>${normalizeProjectId(d.projectId)}</td>
                     <td>
-                        <div style="font-weight:800;">${d.type || '-'}</div>
+                        <div style="font-weight:900;">${d.type || '-'}</div>
                         <div class="muted">${d.note ? String(d.note) : ''}</div>
                     </td>
                     <td>${createdAt}</td>
@@ -317,13 +309,13 @@
             if (isPreviewable) {
                 win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="margin:0"><iframe src="${dataUrl}" frameborder="0" style="border:0;width:100%;height:100vh;"></iframe></body></html>`);
             } else {
-                win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial; padding:16px;"><div style="font-weight:800;margin-bottom:10px;">${safeName}</div><a href="${dataUrl}" download="${safeName}" style="display:inline-block;background:#1890ff;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:800;">下载文件</a></body></html>`);
+                win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName}</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial; padding:16px;"><div style="font-weight:900;margin-bottom:10px;">${safeName}</div><a href="${dataUrl}" download="${safeName}" style="display:inline-block;background:#7262fd;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:900;">下载文件</a></body></html>`);
             }
             win.document.close();
         }
 
         async function removeDoc(id) {
-            if (!confirm('确定删除该单证吗？')) return;
+            if (!confirm('确定删除该文档吗？')) return;
             const doc = await getDoc(id);
             if (doc && doc.applicant && doc.applicant !== CURRENT_USER) {
                 alert('权限不足：仅发布者可删除。');
@@ -375,7 +367,7 @@
                     });
                     if (doc && doc.id) {
                         await addActivity({
-                            text: `${CURRENT_USER} 上传了单据：${file.name}`,
+                            text: `${CURRENT_USER} 上传了文档：${file.name}`,
                             uploader: CURRENT_USER,
                             projectId: pid,
                             docId: doc.id,
