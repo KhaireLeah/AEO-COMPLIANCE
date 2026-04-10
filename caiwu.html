@@ -643,8 +643,9 @@
     const authorizedDept = sessionStorage.getItem('authorizedDept') || localStorage.getItem('bpmAuthorizedDept');
     if (authorizedDept) sessionStorage.setItem('authorizedDept', authorizedDept);
     
-    // 如果没有授权，或者授权的部门不是当前部门（且不是项目管理），则拦截
-    if (!authorizedDept || (authorizedDept !== REQUIRED_DEPT && authorizedDept !== '项目管理')) {
+    // 如果没有授权，或者授权的部门不是当前部门（且不是内控管理），则拦截
+    const hasControlAccess = (authorizedDept === '内控管理' || authorizedDept === '项目管理');
+    if (!authorizedDept || (authorizedDept !== REQUIRED_DEPT && !hasControlAccess)) {
         alert('权限不足：请先登录并选择正确的部门。');
         window.location.href = 'index.html'; 
     }
@@ -707,19 +708,21 @@
     var reuploadDocId = null;
 
     function parseVisibilityInput(visibility) {
-        if (Array.isArray(visibility)) return visibility;
+        if (Array.isArray(visibility)) return visibility.map(v => (v === '项目管理' ? '内控管理' : v));
         if (typeof visibility === 'string') {
             try {
                 const parsed = JSON.parse(visibility);
-                if (Array.isArray(parsed)) return parsed;
-                if (typeof parsed === 'string') return [parsed];
-                return [String(visibility).replace(/^['"]|['"]$/g, '')];
+                if (Array.isArray(parsed)) return parsed.map(v => (v === '项目管理' ? '内控管理' : v));
+                if (typeof parsed === 'string') return [parsed === '项目管理' ? '内控管理' : parsed];
+                return [String(visibility).replace(/^['"]|['"]$/g, '') === '项目管理' ? '内控管理' : String(visibility).replace(/^['"]|['"]$/g, '')];
             } catch (e) {
-                return [String(visibility).replace(/^['"]|['"]$/g, '')];
+                const s = String(visibility).replace(/^['"]|['"]$/g, '');
+                return [s === '项目管理' ? '内控管理' : s];
             }
         }
         if (visibility == null) return [];
-        return [String(visibility).replace(/^['"]|['"]$/g, '')];
+        const s = String(visibility).replace(/^['"]|['"]$/g, '');
+        return [s === '项目管理' ? '内控管理' : s];
     }
 
     function getVisCheckbox(value) {
@@ -737,7 +740,7 @@
         const allCb = getVisCheckbox('all');
         if (allCb && allCb.checked) return;
         const deptCb = getVisCheckbox(REQUIRED_DEPT);
-        const pmCb = getVisCheckbox('项目管理');
+        const pmCb = getVisCheckbox('内控管理');
         if (deptCb) deptCb.checked = true;
         if (pmCb) pmCb.checked = true;
     }
@@ -1249,11 +1252,17 @@
         document.getElementById('historyBody').innerHTML = '';
     }
 
+    function normalizeDeptValue(dept) {
+        if (dept === '项目管理') return '内控管理';
+        return dept;
+    }
+
     function getDeptDisplay(dept) {
-        if (dept === '业务部') return '单证管理';
-        if (dept === '仓储部') return '仓储管理';
-        if (dept === '财务部') return '供应链管理';
-        return dept || '-';
+        const d = normalizeDeptValue(dept);
+        if (d === '业务部') return '单证管理';
+        if (d === '仓储部') return '仓储管理';
+        if (d === '财务部') return '供应链管理';
+        return d || '-';
     }
 
     function getTypeCategory(type) {
@@ -1309,7 +1318,7 @@
         const { dept, audit, type } = getLedgerFilters();
 
         const rows = STATE.docs.filter(d => {
-            if (dept !== 'all' && d.dept !== dept) return false;
+            if (dept !== 'all' && normalizeDeptValue(d.dept) !== dept) return false;
             if (audit !== 'all' && getAuditState(d) !== audit) return false;
             if (type !== 'all' && getTypeCategory(d.type) !== type) return false;
             return true;
@@ -1707,27 +1716,27 @@
     <div class="sidebar">
         <div class="department-title">部门分类</div>
         <div class="menu-item" onclick="window.location.href='yewu.html'">
-            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMTg5MGZmIiBkPSJNNyAyaDhsNCA0djE2YTIgMiAwIDAgMS0yIDJIN2EyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptNyAxLjVWN2gzLjVMMTQgMy41ek04IDExaDh2LTJIOHYyem0wIDRoOHYtMkg4djJ6bTAgNGg1di0ySDh2MnoiLz48L3N2Zz4=" alt="" class="menu-item-icon">
             <div class="menu-item-text">
                 <h4>单证管理</h4>
             </div>
         </div>
         <div class="menu-item" onclick="window.location.href='cangchu.html'">
-            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMjEuOCA4LjdsLTEuNC0xLjVMNy43IDQuNCA2LjMgNS44bDEyLjUgMTEuMmwzLjEtMy4xYy42LS42LjYtMS41IDAtMi4xek0xNy41IDEuOWwtMS40IDEuNEwzLjggMTUuOGwtMS40IDEuNGMtLjYtLjYtMS41LS42LTIuMSAwcy0uNiAxLjUgMCAyLjFsMy41IDMuNWMyLjIgMi4yIDUuOCAyLjIgOCAwTDIxLjggOC43Yy42LS42LjYtMS41IDAtMi4xek0xNiAxMy4ybDEuNCAxLjRMMTAuMiAyMWwtMS40LTEuNEwxNiAxMy4yeiIvPjwvc3ZnPg==" alt="" class="menu-item-icon">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjZmE4YzE2IiBkPSJNMyAxMGw5LTYgOSA2djEwYTIgMiAwIDAgMS0yIDJINWEyIDIgMCAwIDEtMi0yVjEwem0yIDEuMlYyMGgxNHYtOC44bC03LTQuNy03IDQuN3pNNyAyMHYtNmgxMHY2aC0ydi00SDl2NEg3eiIvPjwvc3ZnPg==" alt="" class="menu-item-icon">
             <div class="menu-item-text">
                 <h4>仓储管理</h4>
             </div>
         </div>
         <div class="menu-item active" onclick="window.location.href='caiwu.html'">
-            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNCAyMGg0djRIMFY0aDE2djZIMjBWNGMwLTEuMS0uOS0yLTItMkg0Yy0xLjEgMC0yIC45LTIgMnYxNGMwIDEuMS45IDIgMiAyaDE2djJoLTR2LTZ6bTAtN2gxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6bmTAtNGgxMnYtMkg0djJ6Ii8+PC9zdmc+" alt="" class="menu-item-icon">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNTJjNDFhIiBkPSJNNy41IDdBNC41IDQuNSAwIDAgMSAxMiAyLjVoMlY1aC0yQTIgMiAwIDAgMCAxMCA3djFINy41Vjd6bTkgMEEyIDIgMCAwIDAgMTQuNSA1SDE0VjIuNWguNUE0LjUgNC41IDAgMCAxIDE5IDd2MWgtMi41Vjd6TTkgOWg2djJIOVY5em0tNSAzaDE2djJoLTEuM2E0LjUgNC41IDAgMCAxLTQuMiAzSDkuNWE0LjUgNC41IDAgMCA1LTQuMi0zSDR2LTJ6bTMuMiAyYTIgMiAwIDAgMCAyIDEuNWg1LjZhMiAyIDAgMCAwIDItMS41SDcuMnoiLz48L3N2Zz4=" alt="" class="menu-item-icon">
             <div class="menu-item-text">
                 <h4>供应链管理</h4>
             </div>
         </div>
         <div class="menu-item" onclick="window.location.href='xiangmu.html'">
-            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNzI2MmZkIiBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMzhjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTQgNCAxLjc5IDQgNC0xLjc5IDQtNCA0em0wLTEwYy0yLjc2IDAtNS0yLjI0LTUtNXMgLjI0LTUgNS01IDUgMi4yNCA1IDUtMi4yNCA1LTUgNXoiLz48L3N2Zz4=" alt="" class="menu-item-icon">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjNzI2MmZkIiBkPSJNMTIgMmw4IDR2NmMwIDUtMy40IDkuNC04IDEwLTQuNi0uNi04LTUtOC0xMFY2bDgtNHptLTEgMTQuMmw2LjItNi4yLTEuNC0xLjRMMTEgMTMuNCA4LjIgMTAuNiA2LjggMTJsNC4yIDQuMnoiLz48L3N2Zz4=" alt="" class="menu-item-icon">
             <div class="menu-item-text">
-                <h4>项目管理</h4>
+                <h4>内控管理</h4>
             </div>
         </div>
         <div class="memo-container">
@@ -1764,7 +1773,7 @@
                         <option value="业务部">单证管理</option>
                         <option value="仓储部">仓储管理</option>
                         <option value="财务部">供应链管理</option>
-                        <option value="项目管理">项目管理</option>
+                        <option value="内控管理">内控管理</option>
                     </select>
                     <select id="filterAudit" onchange="renderLedger()">
                         <option value="all">全部审核状态</option>
@@ -1834,7 +1843,7 @@
                             <label>设置可见权限 (多选)</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666;">
                                 <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="all"> 所有人可见</label>
-                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="项目管理"> 项目管理</label>
+                                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="内控管理"> 内控管理</label>
                                 <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="业务部"> 单证管理</label>
                                 <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="仓储部"> 仓储管理</label>
                                 <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="vis-check" value="财务部" checked> 供应链管理</label>
@@ -1891,7 +1900,7 @@
         <label>可见性权限 (Visibility)</label>
         <div id="ledgerVisBlock" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #666; margin-top: 5px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="all"> 所有人可见</label>
-            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="项目管理"> 项目管理</label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="内控管理"> 内控管理</label>
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="业务部"> 单证管理</label>
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="仓储部"> 仓储管理</label>
             <label style="display: flex; align-items: center; gap: 4px; margin: 0;"><input type="checkbox" class="edit-vis-check" value="财务部"> 供应链管理</label>
