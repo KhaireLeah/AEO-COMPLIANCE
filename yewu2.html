@@ -131,6 +131,14 @@
             color: #1890ff;
         }
         .muted { color: rgba(0,0,0,0.45); font-size: 12px; }
+        .audit-link {
+            color: #1890ff;
+            font-weight: 800;
+            font-size: 12px;
+            text-decoration: none;
+            margin-left: 8px;
+        }
+        .audit-link:hover { text-decoration: underline; }
         .modal-mask {
             position: fixed;
             inset: 0;
@@ -254,9 +262,15 @@
                     <input id="auditBy" type="text" placeholder="请输入审核人姓名">
                 </div>
             </div>
+            <div id="auditReasonBlock" style="display:none; margin-top:10px;">
+                <label>退回原因</label>
+                <textarea id="auditReason" placeholder="请输入退回原因..."></textarea>
+            </div>
             <div class="modal-actions">
                 <button class="btn" id="auditCancel">取消</button>
-                <button class="btn btn-primary" id="auditOk">确认</button>
+                <button class="btn btn-primary" id="auditSaveBtn" style="display:none;">保存</button>
+                <button class="btn btn-primary" id="auditApproveBtn" style="display:none;">确认通过</button>
+                <button class="btn btn-danger" id="auditRejectBtn" style="display:none;">确认退回</button>
             </div>
         </div>
     </div>
@@ -315,6 +329,21 @@
             return a ? String(a) : '';
         }
 
+        function getRejectReason(doc) {
+            const r = doc && (doc.rejectReason || doc.reject_reason || doc.rejectNote || doc.reason);
+            return r ? String(r) : '';
+        }
+
+        function escapeHtml(value) {
+            const s = String(value == null ? '' : value);
+            return s
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         async function renderLedger() {
             const tbody = document.getElementById('ledgerBody');
             if (!tbody) return;
@@ -322,6 +351,7 @@
             const docs = await getDocs();
             const pid = getCurrentProjectId();
             const rows = (docs || []).filter(d => normalizeProjectId(d.projectId) === pid).filter(d => d && d.dept === REQUIRED_DEPT);
+            const byId = new Map(rows.map(d => [String(d.id), d]));
 
             const countEl = document.getElementById('docCount');
             if (countEl) countEl.textContent = String(rows.length);
@@ -338,15 +368,20 @@
                 const fileName = d.name || '';
                 const auditStatus = getAuditDisplay(d.status);
                 const auditor = getAuditorDisplay(d);
+                const rejectReason = getRejectReason(d);
+                const hasRejectReason = String(d.status || '') === 'rejected' && !!String(rejectReason).trim();
                 tr.innerHTML = `
-                    <td>${normalizeProjectId(d.projectId)}</td>
-                    <td>${String(fileName || '-')}</td>
+                    <td>${escapeHtml(normalizeProjectId(d.projectId))}</td>
+                    <td>${escapeHtml(fileName || '-')}</td>
                     <td>
-                        <div style="font-weight:800;">${d.type || '-'}</div>
-                        <div class="muted">${d.note ? String(d.note) : ''}</div>
+                        <div style="font-weight:800;">${escapeHtml(d.type || '-')}</div>
+                        <div class="muted">${escapeHtml(d.note ? String(d.note) : '')}</div>
                     </td>
-                    <td><span class="pill">${auditStatus}</span></td>
-                    <td>${String(auditor || '-')}</td>
+                    <td>
+                        <span class="pill">${escapeHtml(auditStatus)}</span>
+                        ${hasRejectReason ? `<a href="#" class="audit-link" data-act="reason" data-id="${escapeHtml(d.id)}">查看原因</a>` : ''}
+                    </td>
+                    <td>${escapeHtml(auditor || '-')}</td>
                     <td>${createdAt}</td>
                     <td>
                         <button class="btn" data-act="view" data-id="${d.id}">查看</button>
@@ -377,6 +412,16 @@
                     await openAudit(id);
                 });
             });
+
+            tbody.querySelectorAll('a[data-act="reason"]').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const id = a.getAttribute('data-id') || '';
+                    const doc = byId.get(String(id));
+                    const reason = getRejectReason(doc);
+                    alert(reason ? `退回原因：${reason}` : '未填写退回原因');
+                });
+            });
         }
 
         function openAuditMask() {
@@ -389,6 +434,19 @@
             if (mask) mask.style.display = 'none';
         }
 
+        function updateAuditUI() {
+            const status = (document.getElementById('auditStatus') || {}).value || 'pending';
+            const reasonBlock = document.getElementById('auditReasonBlock');
+            const saveBtn = document.getElementById('auditSaveBtn');
+            const approveBtn = document.getElementById('auditApproveBtn');
+            const rejectBtn = document.getElementById('auditRejectBtn');
+
+            if (reasonBlock) reasonBlock.style.display = (status === 'rejected') ? 'block' : 'none';
+            if (saveBtn) saveBtn.style.display = (status === 'pending') ? '' : 'none';
+            if (approveBtn) approveBtn.style.display = (status === 'passed') ? '' : 'none';
+            if (rejectBtn) rejectBtn.style.display = (status === 'rejected') ? '' : 'none';
+        }
+
         async function openAudit(id) {
             const doc = await getDoc(id);
             if (!doc) {
@@ -398,18 +456,29 @@
             document.getElementById('auditDocId').value = id;
             document.getElementById('auditStatus').value = String(doc.status || 'pending');
             document.getElementById('auditBy').value = getAuditorDisplay(doc);
+            const reasonInput = document.getElementById('auditReason');
+            if (reasonInput) reasonInput.value = getRejectReason(doc);
             const sub = document.getElementById('auditSub');
-            if (sub) sub.textContent = `文件：${doc.name || doc.type || '-'} · 当前：${getAuditDisplay(doc.status)}`;
+            if (sub) {
+                const reason = getRejectReason(doc);
+                sub.textContent = `文件：${doc.name || doc.type || '-'} · 当前：${getAuditDisplay(doc.status)}${String(doc.status || '') === 'rejected' && String(reason).trim() ? ` · 原因：${reason}` : ''}`;
+            }
+            updateAuditUI();
             openAuditMask();
         }
 
-        async function confirmAudit() {
+        async function submitAudit(statusOverride) {
             const id = (document.getElementById('auditDocId') || {}).value || '';
             if (!id) return;
-            const status = (document.getElementById('auditStatus') || {}).value || 'pending';
+            const status = statusOverride || (document.getElementById('auditStatus') || {}).value || 'pending';
             const auditor = (document.getElementById('auditBy') || {}).value || '';
+            const reason = (document.getElementById('auditReason') || {}).value || '';
             if (!String(auditor).trim()) {
                 alert('请填写审核人。');
+                return;
+            }
+            if (String(status) === 'rejected' && !String(reason).trim()) {
+                alert('请填写退回原因。');
                 return;
             }
 
@@ -419,9 +488,13 @@
                 return;
             }
 
-            await updateDoc(id, { status, auditor: String(auditor).trim() });
+            const payload = { status, auditor: String(auditor).trim() };
+            if (String(status) === 'rejected') payload.rejectReason = String(reason).trim();
+            else payload.rejectReason = '';
+
+            await updateDoc(id, payload);
             await addActivity({
-                text: `${String(auditor).trim()} 审核${getAuditDisplay(status)}：${doc.name || doc.type || ''}`,
+                text: `${String(auditor).trim()} 审核${getAuditDisplay(status)}：${doc.name || doc.type || ''}${String(status) === 'rejected' ? `（原因：${String(reason).trim()}）` : ''}`,
                 uploader: String(auditor).trim(),
                 projectId: getCurrentProjectId(),
                 docId: id,
@@ -534,8 +607,14 @@
 
             const auditCancel = document.getElementById('auditCancel');
             if (auditCancel) auditCancel.addEventListener('click', closeAuditMask);
-            const auditOk = document.getElementById('auditOk');
-            if (auditOk) auditOk.addEventListener('click', confirmAudit);
+            const auditStatus = document.getElementById('auditStatus');
+            if (auditStatus) auditStatus.addEventListener('change', updateAuditUI);
+            const auditSaveBtn = document.getElementById('auditSaveBtn');
+            if (auditSaveBtn) auditSaveBtn.addEventListener('click', () => submitAudit('pending'));
+            const auditApproveBtn = document.getElementById('auditApproveBtn');
+            if (auditApproveBtn) auditApproveBtn.addEventListener('click', () => submitAudit('passed'));
+            const auditRejectBtn = document.getElementById('auditRejectBtn');
+            if (auditRejectBtn) auditRejectBtn.addEventListener('click', () => submitAudit('rejected'));
             const auditMask = document.getElementById('auditMask');
             if (auditMask) auditMask.addEventListener('click', (e) => {
                 if (e.target && e.target.id === 'auditMask') closeAuditMask();
