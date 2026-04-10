@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统门户 - 业务流程管理系统</title>
+    <style type="text/css">
+        :root {
+            --primary-color: #1890ff;
+            --bg-color: #f4f7f9;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --white: #ffffff;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--white);
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--primary-color);
+        }
+
+        .header-right {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .help-link {
+            text-decoration: none;
+            color: var(--text-sub);
+            transition: color 0.3s;
+        }
+
+        .help-link:hover { color: var(--primary-color); }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--white);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-title {
+            padding: 30px 25px 15px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: #f8fbff;
+            color: var(--primary-color);
+        }
+
+        .nav-item i { font-size: 20px; }
+        .nav-item span { font-weight: 500; font-size: 15px; }
+
+        .memo-box {
+            margin: auto 20px 30px;
+            padding: 20px;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 12px;
+        }
+
+        .memo-box h5 { margin: 0 0 12px; color: #856404; font-size: 14px; }
+        #memoInput {
+            width: 100%;
+            height: 180px;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 40px;
+            overflow: auto;
+        }
+
+        .login-card {
+            background: var(--white);
+            padding: 50px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .login-card h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .login-card p {
+            color: var(--text-sub);
+            margin-bottom: 35px;
+            font-size: 15px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .login-input:focus {
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .login-btn:hover { opacity: 0.9; }
+
+        .workspace {
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            min-height: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .workspace-top {
+            padding: 22px 22px 0;
+        }
+
+        .workspace-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            margin-bottom: 14px;
+        }
+
+        .workspace-title h1 {
+            font-size: 20px;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .workspace-title .sub {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        .tabbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .tab:hover {
+            border-color: rgba(24,144,255,0.35);
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            background: rgba(24,144,255,0.08);
+            border-color: rgba(24,144,255,0.35);
+            color: var(--primary-color);
+        }
+
+        .tab.locked {
+            opacity: 0.6;
+        }
+
+        .workspace-body {
+            padding: 18px 22px 22px;
+            flex: 1;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 980px) {
+            .cards { grid-template-columns: 1fr; }
+        }
+
+        .card2 {
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 16px;
+            padding: 16px;
+            background: #fff;
+        }
+
+        .card2-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .card2-kv {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .kv {
+            border-radius: 12px;
+            padding: 12px;
+            background: #f6f9ff;
+            border: 1px solid rgba(24,144,255,0.10);
+        }
+
+        .kv .k {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .kv .v {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .workspace-actions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover { opacity: 0.92; }
+
+        .project-item {
+            padding: 14px 22px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .project-item:hover {
+            background: #f8fbff;
+            color: var(--primary-color);
+        }
+
+        .project-item.active {
+            background: #f0f7ff;
+            border-left-color: var(--primary-color);
+        }
+
+        .project-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .project-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+            padding: 18px;
+        }
+
+        .modal h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .modal p {
+            margin: 0 0 14px;
+            color: var(--text-sub);
+            font-size: 13px;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+            letter-spacing: 2px;
+        }
+
+        .modal input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">BPM System</div>
+        <div class="header-right">
+            <input id="headerSearch" placeholder="请输入项目编码/合同号" style="height:28px; border:1px solid #d9d9d9; border-radius:8px; padding:0 10px; width:220px; background:#fff;">
+            <a href="index.html" class="help-link" style="color: #ff4d4f; font-weight: 600;" onclick="sessionStorage.clear()">退出登录</a>
+            <a href="news.html" class="help-link">帮助中心</a>
+            <div id="currentUserTag" style="color: var(--text-sub);"></div>
+            <div id="liveClock" style="color: var(--text-sub); font-family: monospace;"></div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <aside class="sidebar">
+            <div class="nav-title">项目切换轴</div>
+            <div id="projectNav"></div>
+
+            <div class="memo-box">
+                <h5>个人备忘录</h5>
+                <textarea id="memoInput" onkeyup="saveMemo()" placeholder="在此输入备注..."></textarea>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <div class="workspace">
+                <div class="workspace-top">
+                    <div class="workspace-title">
+                        <div>
+                            <h1 id="workspaceH1">工作区</h1>
+                            <div class="sub" id="workspaceSub"></div>
+                        </div>
+                        <div class="tabbar" id="deptTabs"></div>
+                    </div>
+                </div>
+                <div class="workspace-body">
+                    <div class="cards" id="cards"></div>
+                    <div class="workspace-actions">
+                        <button class="btn" onclick="sessionStorage.clear(); location.href='index.html'">退出登录</button>
+                        <button class="btn btn-primary" id="openDeptBtn" style="display:none;">进入工作台</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-mask" id="authMask">
+        <div class="modal" role="dialog" aria-modal="true">
+            <h3 id="authTitle">身份验证</h3>
+            <p id="authDesc">请输入代码以继续</p>
+            <input type="password" id="authInput" placeholder="验证代码">
+            <div class="modal-actions">
+                <button class="btn" onclick="closeAuth()">取消</button>
+                <button class="btn btn-primary" onclick="submitAuth()">验证</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript" src="api.js"></script>
+    <script>
+        if (typeof window !== 'undefined' && window && typeof window.alert === 'function') {
+            window.alert = function() {};
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            const timeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            document.getElementById("liveClock").textContent = timeStr;
+        }
+
+        function saveMemo() {
+            const el = document.getElementById("memoInput");
+            if (el) localStorage.setItem("userMemo", el.value);
+        }
+
+        const DEFAULT_USERS = {
+            logistics: '仓储员A',
+            commercial: '财务员A',
+            docs: '单证员A',
+            pm: '项目经理D'
+        };
+
+        function safeJsonParse(text, fallback) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        const PROJECTS = [
+            { id: '项目01', name: '项目01', sub: '当前进行中', enabled: true },
+        ];
+
+        const TABS = [
+            { key: 'logistics', label: '仓储管理', dept: '仓储部', url: 'cangchu.html', code: 'CC01' },
+            { key: 'commercial', label: '供应链管理', dept: '财务部', url: 'caiwu.html', code: 'CW01' },
+            { key: 'docs', label: '单证管理', dept: '业务部', url: 'yewu.html', code: 'YW01' },
+            { key: 'pm', label: '项目管理', dept: '项目管理', url: 'xiangmu.html', code: 'XM01' }
+        ];
+
+        function normalizeProjectId(pid) {
+            const raw = (pid == null) ? '' : String(pid).trim();
+            if (!raw) return PROJECTS[0].id;
+            const ids = PROJECTS.map(p => p.id);
+            if (!ids.includes(raw)) return PROJECTS[0].id;
+            return raw;
+        }
+
+        let currentProjectId = normalizeProjectId(sessionStorage.getItem('currentProjectId')) || PROJECTS[0].id;
+        let activeTabKey = sessionStorage.getItem('activeTabKey') || TABS[0].key;
+        let pendingTabKey = null;
+
+        function getProjectById(id) {
+            return PROJECTS.find(p => p.id === id) || PROJECTS[0];
+        }
+
+        function isUnlocked(tabKey) {
+            return sessionStorage.getItem(`tabUnlocked:${tabKey}`) === '1';
+        }
+
+        function setUnlocked(tabKey) {
+            sessionStorage.setItem(`tabUnlocked:${tabKey}`, '1');
+        }
+
+        function renderProjects() {
+            const root = document.getElementById('projectNav');
+            root.innerHTML = '';
+            PROJECTS.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'project-item' + (p.id === currentProjectId ? ' active' : '');
+                if (!p.enabled) div.style.opacity = '0.55';
+                div.onclick = () => setProject(p.id);
+                const displayName = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(p.id) : p.name;
+                div.innerHTML = `<div class="project-name">${displayName || p.name}</div><div class="project-sub">${p.sub}</div>`;
+                root.appendChild(div);
+            });
+        }
+
+        function setProject(projectId) {
+            const p = PROJECTS.find(x => x.id === projectId);
+            if (p && p.enabled === false) return;
+            currentProjectId = projectId;
+            sessionStorage.setItem('currentProjectId', currentProjectId);
+            renderProjects();
+            renderWorkspace();
+        }
+
+        function renderTabs() {
+            const root = document.getElementById('deptTabs');
+            root.innerHTML = '';
+            TABS.forEach(t => {
+                const div = document.createElement('div');
+                const locked = !isUnlocked(t.key);
+                div.className = 'tab' + (t.key === activeTabKey ? ' active' : '') + (locked ? ' locked' : '');
+                div.textContent = locked ? `${t.label} 🔒` : t.label;
+                div.onclick = () => onTabClick(t.key);
+                root.appendChild(div);
+            });
+        }
+
+        function getCardDefs(tabKey, unlocked) {
+            const lockedHint = unlocked ? '' : '（需要验证后展示）';
+            if (tabKey === 'logistics') {
+                return [
+                    { title: `供应链采购进度 ${lockedHint}`, kvs: [
+                        { k: '计划节点', v: unlocked ? 'PO 下发 / 交期确认 / 到港预约' : '—' },
+                        { k: '风险提示', v: unlocked ? '关键件交期需复核' : '—' }
+                    ]},
+                    { title: `仓库实时库存 / 七点检查 ${lockedHint}`, kvs: [
+                        { k: '保税状态', v: unlocked ? '在库 / 待出库 / 在途' : '—' },
+                        { k: '七点检查', v: unlocked ? '今日已完成' : '—' }
+                    ]}
+                ];
+            }
+            if (tabKey === 'commercial') {
+                return [
+                    { title: `合作方准入 ${lockedHint}`, kvs: [
+                        { k: '供应商资质', v: unlocked ? '已归档 / 待补充' : '—' },
+                        { k: '客户授信', v: unlocked ? '审批中' : '—' }
+                    ]},
+                    { title: `合同条款 ${lockedHint}`, kvs: [
+                        { k: '关键条款', v: unlocked ? '付款 / 交付 / 违约' : '—' },
+                        { k: '合规关注', v: unlocked ? '出口管制声明' : '—' }
+                    ]}
+                ];
+            }
+            if (tabKey === 'docs') {
+                return [
+                    { title: `单据合规性 ${lockedHint}`, kvs: [
+                        { k: '必备单证', v: unlocked ? '合同 / 发票 / 装箱单' : '—' },
+                        { k: '风险项', v: unlocked ? '品名/HS 编码一致性' : '—' }
+                    ]},
+                    { title: `海关回执 ${lockedHint}`, kvs: [
+                        { k: '申报状态', v: unlocked ? '回执待归档' : '—' },
+                        { k: '异常提示', v: unlocked ? '无' : '—' }
+                    ]}
+                ];
+            }
+            return [
+                { title: `整体进度 ${lockedHint}`, kvs: [
+                    { k: '里程碑', v: unlocked ? '计划 / 执行 / 交付' : '—' },
+                    { k: '协同预警', v: unlocked ? '0' : '—' }
+                ]},
+                { title: `AEO 达标率 ${lockedHint}`, kvs: [
+                    { k: '完成度', v: unlocked ? '92%' : '—' },
+                    { k: '待整改项', v: unlocked ? '2' : '—' }
+                ]}
+            ];
+        }
+
+        function renderWorkspace() {
+            const project = getProjectById(currentProjectId);
+            const displayName = (typeof getProjectDisplayName === 'function') ? getProjectDisplayName(project.id) : project.name;
+            document.getElementById('workspaceH1').textContent = displayName || project.name;
+            document.getElementById('workspaceSub').textContent = `当前项目：${displayName || project.id} · 点击部门标签进行验证并展开面板`;
+
+            const tab = TABS.find(t => t.key === activeTabKey) || TABS[0];
+            const unlocked = isUnlocked(activeTabKey);
+
+            const cards = document.getElementById('cards');
+            cards.innerHTML = '';
+            const defs = getCardDefs(tab.key, unlocked);
+            defs.forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'card2';
+                el.innerHTML = `
+                    <div class="card2-title">${d.title}</div>
+                    <div class="card2-kv">
+                        ${d.kvs.map(kv => `<div class="kv"><div class="k">${kv.k}</div><div class="v">${kv.v}</div></div>`).join('')}
+                    </div>
+                `;
+                cards.appendChild(el);
+            });
+
+            const openBtn = document.getElementById('openDeptBtn');
+            if (unlocked) {
+                openBtn.style.display = '';
+                openBtn.onclick = () => {
+                    const tabDefaultUser = DEFAULT_USERS[tab.key] || '';
+                    const userName = tabDefaultUser || tab.label;
+                    sessionStorage.setItem('currentUserName', userName);
+                    sessionStorage.setItem('currentUserEmail', '');
+                    sessionStorage.setItem('authorizedDept', tab.dept);
+                    const role = (tab.key === 'pm') ? 'pm' : 'member';
+                    sessionStorage.setItem('userRole', role);
+                    localStorage.setItem('bpmCurrentUserName', userName);
+                    localStorage.setItem('bpmAuthorizedDept', tab.dept);
+                    localStorage.setItem('bpmCurrentProjectId', currentProjectId);
+                    localStorage.setItem('bpmRole', role);
+                    window.location.href = tab.url;
+                };
+            } else {
+                openBtn.style.display = 'none';
+            }
+        }
+
+        function onTabClick(tabKey) {
+            activeTabKey = tabKey;
+            sessionStorage.setItem('activeTabKey', activeTabKey);
+            renderTabs();
+            if (isUnlocked(tabKey)) {
+                renderWorkspace();
+                return;
+            }
+            pendingTabKey = tabKey;
+            openAuth();
+        }
+
+        function openAuth() {
+            const tab = TABS.find(t => t.key === pendingTabKey) || TABS[0];
+            document.getElementById('authTitle').textContent = `验证进入：${tab.label}`;
+            document.getElementById('authDesc').textContent = `请输入项目编码/合同号（示例：${tab.code}）`;
+            const mask = document.getElementById('authMask');
+            const input = document.getElementById('authInput');
+            input.value = '';
+            mask.style.display = 'flex';
+            setTimeout(() => input.focus(), 0);
+        }
+
+        function closeAuth() {
+            document.getElementById('authMask').style.display = 'none';
+            pendingTabKey = null;
+        }
+
+        function submitAuth() {
+            const tab = TABS.find(t => t.key === pendingTabKey);
+            if (!tab) return;
+            const code = document.getElementById('authInput').value;
+            if (code === tab.code || code === '666') {
+                setUnlocked(tab.key);
+                if (code === '666') {
+                    TABS.forEach(t => setUnlocked(t.key));
+                }
+                closeAuth();
+                renderTabs();
+                renderWorkspace();
+            } else {
+                alert('验证代码错误，请重试');
+            }
+        }
+
+        document.getElementById('authMask').addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'authMask') closeAuth();
+        });
+
+        document.getElementById('authInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitAuth();
+            if (e.key === 'Escape') closeAuth();
+        });
+
+        window.onload = function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            document.getElementById("memoInput").value = localStorage.getItem("userMemo") || "";
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'userMemo') document.getElementById("memoInput").value = e.newValue || "";
+                if (e.key === 'bpmProjectNames' || e.key === 'bpmSyncTick') {
+                    renderProjects();
+                    renderWorkspace();
+                }
+            });
+
+            if (!sessionStorage.getItem('currentProjectId')) {
+            sessionStorage.setItem('currentProjectId', currentProjectId);
+        }
+
+            renderProjects();
+            renderTabs();
+            renderWorkspace();
+        }
+    </script>
+</body>
+</html>

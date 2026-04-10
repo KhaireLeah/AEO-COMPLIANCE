@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统入口 - 数字化单证管理系统</title>
+    <style type="text/css">
+        :root {
+            --primary-color: #1890ff;
+            --bg-dark: #1a1c1e;
+            --card-bg: #2d3035;
+            --text-light: #e1e1e1;
+            --text-muted: #8e9297;
+            --accent: #00d2ff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text-light);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 动态背景背景效果 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, #1890ff22 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .login-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-logo {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, var(--primary-color), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: all 0.3s;
+            outline: none;
+            letter-spacing: 2px;
+        }
+
+        .login-input:focus {
+            border-color: var(--primary-color);
+            background: rgba(0,0,0,0.3);
+            box-shadow: 0 0 10px rgba(24, 144, 255, 0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: #40a9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(24, 144, 255, 0.3);
+        }
+
+        .footer-links {
+            margin-top: 30px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .company-name {
+            position: absolute;
+            bottom: 30px;
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="brand-logo">DIGITAL ARCHIVE</div>
+        <p style="margin-bottom: 35px; color: var(--text-muted); font-size: 14px;">请输入访问秘钥进入系统</p>
+        
+        <div class="input-group">
+            <label for="password">Security Key</label>
+            <input type="password" id="password" class="login-input" placeholder="••••••" onkeydown="if(event.keyCode==13) checkLogin();">
+        </div>
+        
+        <button class="login-btn" onclick="checkLogin()">验证并进入</button>
+
+        <div class="footer-links">
+            <a href="news.html">忘记秘钥？</a>
+            <a href="home.html">返回首页</a>
+        </div>
+    </div>
+
+    <div class="company-name">SHANGHAI XXX TECHNOLOGY CO., LTD.</div>
+
+    <script type="text/javascript">
+        function checkLogin() {
+            var p = document.getElementById("password").value;
+            // 保持原逻辑：密码 666
+            if (p == "666") {
+                window.location.href = "login.html"; 
+            } else {
+                alert("验证失败，请检查您的访问秘钥。");
+            }
+        }
+    </script>
+</body>
+</html>
