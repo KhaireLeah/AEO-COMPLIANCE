@@ -808,6 +808,11 @@
                 var doc = docs.find(d => d.id === reuploadDocId);
                 if (doc) {
                     document.getElementById('docType').value = doc.type;
+                    const raEl = document.getElementById('requiresAudit');
+                    if (raEl) {
+                        const noAudit = (doc.requiresAudit === false) || String(doc.status || '') === 'no_audit';
+                        raEl.value = noAudit ? 'no' : 'yes';
+                    }
                     setVisibilityFromArray(parseVisibilityInput(doc.visibility));
                     applyVisibilityUI();
                 }
@@ -816,6 +821,8 @@
                 alert('获取旧单据信息失败，请检查网络连接。');
             }
         } else {
+            const raEl = document.getElementById('requiresAudit');
+            if (raEl) raEl.value = 'yes';
             ensureDefaultVisibility();
             applyVisibilityUI();
         }
@@ -837,8 +844,18 @@
         }
 
         var docType = document.getElementById('docType').value;
-        // 单证存储：默认全员可见（本项目组）
-        var selectedVis = ['all'];
+        var selectedVis = [];
+        document.querySelectorAll('.vis-check:checked').forEach(cb => {
+            selectedVis.push(cb.value);
+        });
+        if (selectedVis.includes('all')) selectedVis = ['all'];
+        if (selectedVis.length === 0) {
+            alert('请至少选择一个可见部门！');
+            return;
+        }
+
+        const requiresAudit = ((document.getElementById('requiresAudit') || {}).value || 'yes') === 'yes';
+        const status = requiresAudit ? 'pending' : 'no_audit';
 
         // Show a loading indicator
         const uploadButton = document.querySelector('.btn-upload[onclick="confirmUpload()"]');
@@ -867,11 +884,12 @@
                             fileExt: file.name.split('.').pop().toUpperCase(),
                             fileData: fileData,
                             time: '刚刚 (已更新)', // This will be replaced by server timestamp anyway
-                            status: 'pending',
+                            status: status,
+                            requiresAudit: requiresAudit,
                             visibility: selectedVis
                         };
                         await updateDoc(reuploadDocId, updatedDoc);
-                    alert('单据已重新存入，等待再次审核！');
+                    alert(requiresAudit ? '单据已重新存入，等待再次审核！' : '单据已重新存入（无需审核）。');
                     }
                     reuploadDocId = null;
                 } else {
@@ -887,7 +905,8 @@
                         action: '录入',
                         applicant: CURRENT_USER,
                         time: '刚刚', // Server will generate createdAt
-                        status: 'pending',
+                        status: status,
+                        requiresAudit: requiresAudit,
                         visibility: selectedVis
                     };
                     const createdDoc = await addDoc(newDoc);
@@ -908,7 +927,7 @@
                 await addActivity(activity);
 
                 // 通知项目经理
-                if (PM_USER && PM_USER !== CURRENT_USER) {
+                if (requiresAudit && PM_USER && PM_USER !== CURRENT_USER) {
                     await notifyUser(PM_USER, '收到新单据', `${CURRENT_USER} 上传了新单据: ${file.name}`, docId);
                 }
 
@@ -1284,16 +1303,20 @@
 
     function getAuditState(doc) {
         const status = doc && doc.status;
+        if (String(status || '') === 'no_audit') return 'audited';
         return status && status !== 'pending' ? 'audited' : 'unaudited';
     }
 
     function getAuditDisplay(doc) {
+        const status = doc && doc.status;
+        if (String(status || '') === 'no_audit') return '<span class="status-pill pill-ok">无需审核</span>';
         const audited = getAuditState(doc) === 'audited';
         return audited ? '<span class="status-pill pill-ok">已审核</span>' : '<span class="status-pill pill-warn">未审核</span>';
     }
 
     function getProcessDisplay(doc) {
         const status = doc && doc.status;
+        if (String(status || '') === 'no_audit') return '<span class="status-pill pill-ok">无需审核</span>';
         if (status === 'passed') return '<span class="status-pill pill-ok">已通过</span>';
         if (status === 'rejected') return '<span class="status-pill pill-bad">被退回</span>';
         return '<span class="status-pill pill-warn">待审核</span>';
@@ -1605,6 +1628,7 @@
                     if (doc.status === 'pending') statusDisplay = '<span style="color: #fa8c16;">待审核</span>';
                     else if (doc.status === 'passed') statusDisplay = '<span style="color: #52c41a;">已通过</span>';
                     else if (doc.status === 'rejected') statusDisplay = '<span style="color: #ff4d4f;">被退回</span>';
+                    else if (doc.status === 'no_audit') statusDisplay = '<span style="color: #52c41a;">无需审核</span>';
 
                     const actions = `
                         <a href="#" class="action-link" onclick="viewFile('${doc.applicant}', '', '${JSON.stringify(doc.visibility)}', '${doc.id}')">查看</a>
@@ -1848,6 +1872,13 @@
                                 <option value="海关回执">海关回执</option>
                                 <option value="AEO资质">AEO资质</option>
                                 <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>是否需要审核</label>
+                            <select id="requiresAudit">
+                                <option value="yes" selected>是</option>
+                                <option value="no">否</option>
                             </select>
                         </div>
                         <div class="option-group">

@@ -191,7 +191,7 @@
         <div class="section">
             <h3>单证上传</h3>
             <p class="hint">仅对“单证管理”开放。上传后将出现在下方台账。</p>
-            <div class="row">
+            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
                 <div>
                     <label>单据类型</label>
                     <select id="docType">
@@ -201,6 +201,13 @@
                         <option value="海关回执">海关回执</option>
                         <option value="AEO资质">AEO资质</option>
                         <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label>是否需要审核</label>
+                    <select id="requiresAudit">
+                        <option value="yes" selected>是</option>
+                        <option value="no">否</option>
                     </select>
                 </div>
                 <div>
@@ -289,6 +296,7 @@
         if (CURRENT_USER) sessionStorage.setItem('currentUserName2', CURRENT_USER);
 
         const DEFAULT_PROJECT_ID = '项目01';
+        let LEDGER_BY_ID = new Map();
 
         function normalizeProjectId(pid) {
             const raw = (pid == null) ? '' : String(pid).trim();
@@ -317,8 +325,17 @@
             if (cardEl) cardEl.textContent = title;
         }
 
-        function getAuditDisplay(status) {
+        function normalizeAuditStatus(status) {
             const s = String(status || 'pending');
+            if (s === '通过') return 'passed';
+            if (s === '退回') return 'rejected';
+            if (s === '待审核') return 'pending';
+            return s;
+        }
+
+        function getAuditDisplay(status) {
+            const s = normalizeAuditStatus(status);
+            if (s === 'no_audit') return '无需审核';
             if (s === 'passed') return '通过';
             if (s === 'rejected') return '退回';
             return '待审核';
@@ -327,6 +344,13 @@
         function getAuditorDisplay(doc) {
             const a = doc && (doc.auditor || doc.auditBy);
             return a ? String(a) : '';
+        }
+
+        function shouldRequireAudit(doc) {
+            if (!doc) return true;
+            if (doc.requiresAudit === false) return false;
+            if (normalizeAuditStatus(doc.status) === 'no_audit') return false;
+            return true;
         }
 
         function getRejectReason(doc) {
@@ -351,7 +375,7 @@
             const docs = await getDocs();
             const pid = getCurrentProjectId();
             const rows = (docs || []).filter(d => normalizeProjectId(d.projectId) === pid).filter(d => d && d.dept === REQUIRED_DEPT);
-            const byId = new Map(rows.map(d => [String(d.id), d]));
+            LEDGER_BY_ID = new Map(rows.map(d => [String(d.id), d]));
 
             const countEl = document.getElementById('docCount');
             if (countEl) countEl.textContent = String(rows.length);
@@ -369,7 +393,8 @@
                 const auditStatus = getAuditDisplay(d.status);
                 const auditor = getAuditorDisplay(d);
                 const rejectReason = getRejectReason(d);
-                const hasRejectReason = String(d.status || '') === 'rejected' && !!String(rejectReason).trim();
+                const hasRejectReason = normalizeAuditStatus(d.status) === 'rejected' && !!String(rejectReason).trim();
+                const showAuditBtn = shouldRequireAudit(d);
                 tr.innerHTML = `
                     <td>${escapeHtml(normalizeProjectId(d.projectId))}</td>
                     <td>${escapeHtml(fileName || '-')}</td>
@@ -385,7 +410,7 @@
                     <td>${createdAt}</td>
                     <td>
                         <button class="btn" data-act="view" data-id="${d.id}">查看</button>
-                        <button class="btn btn-primary" data-act="audit" data-id="${d.id}">审核</button>
+                        ${showAuditBtn ? `<button class="btn btn-primary" data-act="audit" data-id="${escapeHtml(d.id)}">审核</button>` : ''}
                         <button class="btn btn-danger" data-act="del" data-id="${d.id}">删除</button>
                     </td>
                 `;
@@ -410,16 +435,6 @@
                 btn.addEventListener('click', async () => {
                     const id = btn.getAttribute('data-id');
                     await openAudit(id);
-                });
-            });
-
-            tbody.querySelectorAll('a[data-act="reason"]').forEach(a => {
-                a.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const id = a.getAttribute('data-id') || '';
-                    const doc = byId.get(String(id));
-                    const reason = getRejectReason(doc);
-                    alert(reason ? `退回原因：${reason}` : '未填写退回原因');
                 });
             });
         }
@@ -453,8 +468,12 @@
                 alert('无法获取单证信息。');
                 return;
             }
+            if (!shouldRequireAudit(doc)) {
+                alert('该单证类型设置为无需审核。');
+                return;
+            }
             document.getElementById('auditDocId').value = id;
-            document.getElementById('auditStatus').value = String(doc.status || 'pending');
+            document.getElementById('auditStatus').value = String(normalizeAuditStatus(doc.status) || 'pending');
             document.getElementById('auditBy').value = getAuditorDisplay(doc);
             const reasonInput = document.getElementById('auditReason');
             if (reasonInput) reasonInput.value = getRejectReason(doc);
@@ -470,7 +489,7 @@
         async function submitAudit(statusOverride) {
             const id = (document.getElementById('auditDocId') || {}).value || '';
             if (!id) return;
-            const status = statusOverride || (document.getElementById('auditStatus') || {}).value || 'pending';
+            const status = normalizeAuditStatus(statusOverride || (document.getElementById('auditStatus') || {}).value || 'pending');
             const auditor = (document.getElementById('auditBy') || {}).value || '';
             const reason = (document.getElementById('auditReason') || {}).value || '';
             if (!String(auditor).trim()) {
@@ -552,9 +571,11 @@
 
             const pid = getCurrentProjectId();
             const type = (document.getElementById('docType') || {}).value || '其他';
+            const requiresAudit = ((document.getElementById('requiresAudit') || {}).value || 'yes') === 'yes';
             const tags = (document.getElementById('tagsInput') || {}).value || '';
             const note = (document.getElementById('noteInput') || {}).value || '';
             const visibility = ['all'];
+            const status = requiresAudit ? 'pending' : 'no_audit';
 
             if (btn) btn.disabled = true;
             if (hint) hint.textContent = '上传中...';
@@ -572,7 +593,8 @@
                         applicant: CURRENT_USER,
                         note,
                         tags,
-                        status: 'pending',
+                        status,
+                        requiresAudit,
                         visibility
                     });
                     if (doc && doc.id) {
@@ -604,6 +626,17 @@
 
             const btn = document.getElementById('uploadBtn');
             if (btn) btn.addEventListener('click', uploadDoc);
+
+            const ledgerBody = document.getElementById('ledgerBody');
+            if (ledgerBody) ledgerBody.addEventListener('click', (e) => {
+                const a = e.target && e.target.closest ? e.target.closest('a[data-act="reason"]') : null;
+                if (!a) return;
+                e.preventDefault();
+                const id = a.getAttribute('data-id') || '';
+                const doc = LEDGER_BY_ID.get(String(id));
+                const reason = getRejectReason(doc);
+                alert(reason ? `退回原因：${reason}` : '未填写退回原因');
+            });
 
             const auditCancel = document.getElementById('auditCancel');
             if (auditCancel) auditCancel.addEventListener('click', closeAuditMask);
