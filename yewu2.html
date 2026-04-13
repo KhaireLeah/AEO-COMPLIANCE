@@ -609,9 +609,9 @@
                 alert('请先选择文件。');
                 return;
             }
-            const maxBytes = 900 * 1024;
+            const maxBytes = 100 * 1024;
             if (file.size > maxBytes) {
-                alert(`文件过大（${Math.ceil(file.size / 1024)}KB），建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB。`);
+                alert(`文件过大（${Math.ceil(file.size / 1024)}KB），由于后端存储限制，建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB。`);
                 return;
             }
 
@@ -651,9 +651,11 @@
                             docId: doc.id,
                             visibility
                         });
+                        if (fileInput) fileInput.value = '';
+                        if (hint) hint.textContent = '上传成功';
+                    } else {
+                        throw new Error('服务器保存失败（可能文件过大或存储已满）');
                     }
-                    if (fileInput) fileInput.value = '';
-                    if (hint) hint.textContent = '上传成功';
                     await renderLedger();
                 } catch (e2) {
                     alert('上传失败：' + (e2 && e2.message ? e2.message : '未知错误'));
@@ -668,7 +670,7 @@
         window.onload = function() {
             updateProjectNameUI();
             const userTag = document.getElementById('userTag');
-            if (userTag) userTag.textContent = `已登录: ${CURRENT_USER}`;
+            if (userTag) userTag.textContent = `已登录: 单证管理`;
 
             const btn = document.getElementById('uploadBtn');
             if (btn) btn.addEventListener('click', uploadDoc);

@@ -1376,9 +1376,9 @@
             return;
         }
 
-        const maxBytes = 900 * 1024;
+        const maxBytes = 100 * 1024;
         if (file.size > maxBytes) {
-            alert(`文件过大（${Math.ceil(file.size / 1024)}KB）。当前系统会把文件以 Base64 写入在线接口，建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB 的文件（PDF/图片/文本）。`);
+            alert(`文件过大（${Math.ceil(file.size / 1024)}KB）。由于后端存储限制，建议上传 ≤ ${Math.floor(maxBytes / 1024)}KB 的文件（PDF/图片/文本）。`);
             return;
         }
 
@@ -1425,8 +1425,12 @@
                             requiresAudit: requiresAudit,
                             visibility: selectedVis
                         };
-                        await updateDoc(reuploadDocId, updatedDoc);
-                        alert(requiresAudit ? '单据已重新存入！' : '单据已重新存入（无需审核）。');
+                        const result = await updateDoc(reuploadDocId, updatedDoc);
+                        if (result && result.id) {
+                            alert(requiresAudit ? '单据已重新存入！' : '单据已重新存入（无需审核）。');
+                        } else {
+                            throw new Error('服务器保存失败（可能文件过大或存储已满）');
+                        }
                     }
                     reuploadDocId = null;
                 } else {
@@ -1444,8 +1448,12 @@
                         visibility: selectedVis
                     };
                     const createdDoc = await addDoc(newDoc);
-                    docId = createdDoc.id;
-                    alert('文件上传成功！');
+                    if (createdDoc && createdDoc.id) {
+                        docId = createdDoc.id;
+                        alert('文件上传成功！');
+                    } else {
+                        throw new Error('服务器保存失败（可能文件过大或存储已满）');
+                    }
                 }
 
                 var activity = {
@@ -2001,7 +2009,7 @@
         }
 
         const userNameEl = document.querySelector('.user-name');
-        if (userNameEl) userNameEl.textContent = `已登录: ${CURRENT_USER}`;
+        if (userNameEl) userNameEl.textContent = `已登录: ${getDeptDisplay(REQUIRED_DEPT)}`;
         const tools = document.getElementById('activityAdminTools');
         if (tools) tools.style.display = IS_ADMIN ? 'flex' : 'none';
 
@@ -2270,7 +2278,7 @@
 <!-- Avatar UI -->
 <div class="user-avatar" onclick="toggleLogoutMenu()">
     <div class="avatar-img">👤</div>
-    <div class="user-name">已登录: </div>
+    <div class="user-name">已登录: 内控管理</div>
     <div class="logout-menu" id="logoutMenu">
         <div onclick="logout()">退出登录</div>
     </div>
