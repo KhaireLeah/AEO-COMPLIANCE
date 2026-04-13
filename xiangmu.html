@@ -1497,12 +1497,8 @@
 
     function getTypeCategory(type) {
         const t = String(type || '');
-        if (t.includes('合同') || t.includes('协议')) return '商务合同';
-        if (t.includes('装箱') || t.includes('提单') || t.includes('物流') || t.includes('入库') || t.includes('出库') || t.includes('库存')) return '物流单据';
-        if (t.includes('报关') || t.includes('申报') || t.includes('海关') || t.includes('回执') || t.includes('通关')) return '报关单证';
-        if (t.includes('发票') || t.includes('付款') || t.includes('结算') || t.includes('汇款')) return '财务凭证';
-        if (t.includes('资质') || t.includes('认证') || t.includes('AEO') || t.includes('许可证')) return '合规资质';
-        if (t.includes('技术') || t.includes('手册') || t.includes('规格') || t.includes('图纸')) return '技术资料';
+        if (t.includes('节点')) return '节点表';
+        if (t.includes('AEO') || t.includes('合规')) return 'AEO合规';
         return '其他';
     }
 
@@ -2157,10 +2153,8 @@
                         <div class="option-group">
                             <label>选择单据类型</label>
                             <select id="docType">
-                                <option value="项目指导书">项目指导书</option>
-                                <option value="项目总结">项目总结</option>
-                                <option value="会议纪要">会议纪要</option>
-                                <option value="进度报告">进度报告</option>
+                                <option value="节点表">节点表</option>
+                                <option value="AEO合规">AEO合规</option>
                                 <option value="其他">其他</option>
                             </select>
                         </div>

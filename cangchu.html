@@ -1298,12 +1298,9 @@
 
     function getTypeCategory(type) {
         const t = String(type || '');
-        if (t.includes('合同') || t.includes('协议')) return '商务合同';
-        if (t.includes('装箱') || t.includes('提单') || t.includes('物流') || t.includes('入库') || t.includes('出库') || t.includes('库存')) return '物流单据';
-        if (t.includes('报关') || t.includes('申报') || t.includes('海关') || t.includes('回执') || t.includes('通关')) return '报关单证';
-        if (t.includes('发票') || t.includes('付款') || t.includes('结算') || t.includes('汇款')) return '财务凭证';
-        if (t.includes('资质') || t.includes('认证') || t.includes('AEO') || t.includes('许可证')) return '合规资质';
-        if (t.includes('技术') || t.includes('手册') || t.includes('规格') || t.includes('图纸')) return '技术资料';
+        if (t.includes('核放')) return '核放单';
+        if (t.includes('合核注') || t.includes('核注')) return '合核注清单';
+        if (t.includes('入库') || t.includes('出库')) return '出/入库单';
         return '其他';
     }
 
@@ -1898,11 +1895,9 @@
                         <div class="option-group">
                             <label>选择单据类型</label>
                             <select id="docType">
-                                <option value="入库单">入库单</option>
-                                <option value="出库单">出库单</option>
-                                <option value="库存清单">库存清单</option>
-                                <option value="装箱单">装箱单</option>
-                                <option value="提单">提单</option>
+                                <option value="核放单">核放单</option>
+                                <option value="合核注清单">合核注清单</option>
+                                <option value="出/入库单">出/入库单</option>
                                 <option value="其他">其他</option>
                             </select>
                         </div>
