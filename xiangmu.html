@@ -1563,7 +1563,7 @@
         });
 
         if (rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">暂无单证</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无单证</td></tr>';
             return;
         }
 
@@ -1591,7 +1591,6 @@
                 <td>${getAuditDisplay(doc)}</td>
                 <td>${getProcessDisplay(doc)}${lastLine}</td>
                 <td>${getDeptDisplay(doc.dept)}</td>
-                <td>${doc.applicant || '-'}</td>
                 <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'}</td>
                 <td>
                     ${viewLink}
@@ -1952,7 +1951,7 @@
             const pendingEl = document.getElementById('pendingCount');
             if (pendingEl) pendingEl.innerText = 'N/A';
             const tbody = document.getElementById('ledgerBody');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">加载失败...</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">加载失败...</td></tr>';
         } finally {
             window.__pmRefreshInFlight = false;
         }
@@ -2220,7 +2219,6 @@
                         <col style="width: 90px;">
                         <col style="width: 220px;">
                         <col style="width: 110px;">
-                        <col style="width: 120px;">
                         <col style="width: 180px;">
                         <col style="width: 110px;">
                     </colgroup>
@@ -2230,7 +2228,6 @@
                             <th>审核</th>
                             <th>流程状态</th>
                             <th>归属部门</th>
-                            <th>上传人</th>
                             <th>时间</th>
                             <th>操作</th>
                         </tr>

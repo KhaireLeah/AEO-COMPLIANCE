@@ -1365,7 +1365,7 @@
         });
 
         if (rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">暂无单证</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无单证</td></tr>';
             return;
         }
 
@@ -1389,7 +1389,6 @@
                 <td>${getAuditDisplay(doc)}</td>
                 <td>${getProcessDisplay(doc)}${lastLine}</td>
                 <td>${getDeptDisplay(doc.dept)}</td>
-                <td>${doc.applicant || '-'}</td>
                 <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '-'}</td>
                 <td>
                     <a href="#" style="color:#1890ff; text-decoration:none;" onclick="openLedgerEdit('${doc.id}')">编辑</a>
@@ -1671,7 +1670,6 @@
                     tr.innerHTML = `<td>${doc.name || '-'}</td>
                                   <td>${doc.type || '-'}</td>
                                   <td>${statusDisplay}</td>
-                                  <td>${doc.applicant || '-'}</td>
                                   <td>${new Date(doc.createdAt).toLocaleString()}</td>
                                   <td>${actions.trim()}</td>`;
                     pendingTable.appendChild(tr);
@@ -1697,7 +1695,7 @@
             const pendingCountEl = document.getElementById('pendingCount');
             if (pendingCountEl) pendingCountEl.innerText = '[ 0 ]';
             const tbody = document.getElementById('ledgerBody');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">加载失败...</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">加载失败...</td></tr>';
         }
     }
 
@@ -1865,13 +1863,12 @@
                             <th style="width: 100px;">审核</th>
                             <th>流程状态</th>
                             <th style="width: 100px;">所属部门</th>
-                            <th style="width: 100px;">申请人</th>
                             <th style="width: 180px;">提交时间</th>
                             <th style="width: 120px;">操作</th>
                         </tr>
                     </thead>
                     <tbody id="ledgerBody">
-                        <tr><td colspan="7" style="text-align:center; color:#999;">正在加载台账...</td></tr>
+                        <tr><td colspan="6" style="text-align:center; color:#999;">正在加载台账...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1888,7 +1885,6 @@
                             <th>文件名称</th>
                             <th>单证类型</th>
                             <th>审核状态</th>
-                            <th>申请人</th>
                             <th>停留时间</th>
                             <th>操作</th>
                         </tr>
