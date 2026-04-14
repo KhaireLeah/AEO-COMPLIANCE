@@ -279,7 +279,7 @@ function setProjectDisplayName(projectId, name) {
 
 function getPmUserName() {
     const v = localStorage.getItem('bpmPmUserName');
-    return (v && String(v).trim()) ? String(v).trim() : '项目经理D';
+    return (v && String(v).trim()) ? String(v).trim() : '内控管理';
 }
 
 function setPmUserName(userName) {

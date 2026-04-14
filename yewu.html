@@ -650,7 +650,7 @@
         window.location.href = 'index.html'; 
     }
 
-    const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "单证员A";
+    const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "单证管理";
     if (CURRENT_USER) sessionStorage.setItem('currentUserName', CURRENT_USER);
     const USER_ROLE = sessionStorage.getItem('userRole') || localStorage.getItem('bpmRole') || 'member';
     const IS_ADMIN = (USER_ROLE === 'pm');

@@ -704,7 +704,7 @@
         window.location.href = 'login.html';
     }
 
-    const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "项目经理D";
+    const CURRENT_USER = sessionStorage.getItem('currentUserName') || localStorage.getItem('bpmCurrentUserName') || "内控管理";
     if (CURRENT_USER) sessionStorage.setItem('currentUserName', CURRENT_USER);
     const IS_ADMIN = (USER_ROLE === 'pm' || hasControlAccess);
     const REQUIRED_DEPT = '内控管理';
